@@ -507,6 +507,18 @@ textarea:focus {
   color: #173f46;
 }
 
+.data-notice {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border: 1px solid #e6c98d;
+  border-left: 3px solid #d99b31;
+  border-radius: 6px;
+  background: #fdf6e6;
+  color: #6b4f18;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .empty-state,
 .empty-workspace-panel {
   display: grid;
@@ -592,5 +604,371 @@ textarea:focus {
 
   .status-actions {
     margin: 14px 0;
+  }
+}
+
+/* --- Auth pages ---------------------------------------------------------- */
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid #ded8cc;
+  border-radius: 12px;
+  padding: 26px;
+  background: #ffffff;
+}
+
+.auth-card-centered {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  text-align: center;
+  color: #5e696d;
+}
+
+.auth-heading {
+  margin: 22px 0 18px;
+}
+
+.auth-heading h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+}
+
+.auth-heading p {
+  margin: 0;
+  color: #5e696d;
+  font-size: 14px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 4px;
+}
+
+.auth-form input {
+  width: 100%;
+  margin-bottom: 12px;
+  border: 1px solid #cfc7b9;
+  border-radius: 8px;
+  padding: 10px 12px;
+  outline: 0;
+}
+
+.auth-form input:focus {
+  box-shadow: 0 0 0 3px rgba(240, 184, 77, 0.35);
+}
+
+.auth-form input:disabled {
+  background: #f6f4ef;
+  color: #5e696d;
+}
+
+.auth-form .generate-button {
+  margin-top: 6px;
+}
+
+.label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.field-hint {
+  margin: -6px 0 12px;
+  color: #5e696d;
+  font-size: 12.5px;
+}
+
+.field-hint.centered {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.field-hint.upsell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.quiet-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #5e696d;
+  cursor: pointer;
+  font-size: 12.5px;
+  text-decoration: underline;
+}
+
+.auth-footer {
+  margin-top: 18px;
+  color: #5e696d;
+  text-align: center;
+  font-size: 13.5px;
+}
+
+.auth-divider {
+  display: grid;
+  place-items: center;
+  margin: 16px 0;
+  border-top: 1px solid #ded8cc;
+}
+
+.auth-divider span {
+  transform: translateY(-50%);
+  padding: 0 10px;
+  background: #ffffff;
+  color: #5e696d;
+  font-size: 12px;
+}
+
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  border: 1px solid #cfc7b9;
+  border-radius: 8px;
+  padding: 11px;
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.google-button:hover:not(:disabled) {
+  background: #faf8f4;
+}
+
+.form-error,
+.form-notice {
+  margin: 0 0 10px;
+  border-radius: 6px;
+  padding: 9px 11px;
+  font-size: 13px;
+}
+
+.form-error {
+  border: 1px solid #e8b4b0;
+  background: #fdf1f0;
+  color: #8a2f28;
+}
+
+.form-notice {
+  border: 1px solid #a8cfae;
+  background: #f1f8f2;
+  color: #1f5b2c;
+}
+
+/* --- App chrome ---------------------------------------------------------- */
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid #ded8cc;
+  padding: 12px 20px;
+  background: #ffffff;
+}
+
+.app-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.app-nav-links {
+  display: flex;
+  gap: 6px;
+  margin-left: 10px;
+}
+
+.app-nav-links a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 7px;
+  padding: 7px 11px;
+  color: #5e696d;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-nav-links a:hover,
+.app-nav-links a.active {
+  background: #f0ece3;
+  color: #173f46;
+}
+
+.app-nav-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.account-email {
+  max-width: 180px;
+  overflow: hidden;
+  color: #5e696d;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #cfc7b9;
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: #5e696d;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.plan-badge.pro {
+  border-color: #d99b31;
+  background: #fdf6e6;
+  color: #6b4f18;
+}
+
+.tracking-counter {
+  border: 1px solid #cfc7b9;
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: #5e696d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tracked-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: 6px;
+  background: #d99b31;
+}
+
+.upgrade-notice {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  border: 1px solid #e6c98d;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fdf6e6;
+  color: #6b4f18;
+}
+
+.upgrade-notice strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.upgrade-notice p {
+  margin: 3px 0 0;
+  font-size: 13px;
+}
+
+/* --- Settings and pricing ------------------------------------------------ */
+
+.settings-shell {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 26px 20px 48px;
+}
+
+.settings-heading h1 {
+  margin: 2px 0 0;
+  font-size: 26px;
+}
+
+.settings-shell .generate-button,
+.settings-shell .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  text-decoration: none;
+}
+
+.plan-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.plan-card {
+  border: 1px solid #ded8cc;
+  border-radius: 12px;
+  padding: 22px;
+  background: #ffffff;
+}
+
+.plan-card.featured {
+  border-color: #d99b31;
+  box-shadow: 0 6px 18px rgba(217, 155, 49, 0.14);
+}
+
+.plan-card h2 {
+  margin: 6px 0 14px;
+  font-size: 30px;
+}
+
+.plan-card h2 span {
+  color: #5e696d;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.plan-card ul {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-card li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.plan-card .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+@media (max-width: 720px) {
+  .app-nav {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .account-email {
+    display: none;
   }
 }
