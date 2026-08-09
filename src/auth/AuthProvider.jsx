@@ -67,6 +67,10 @@ export function AuthProvider({ children }) {
       loading,
       // The webhook is the only writer of `plan`, so this is trustworthy for
       // display. Anything that actually costs money is re-checked server-side.
+      //
+      // `plan` is the raw value the entitlements table keys on, and matches the
+      // mobile app's vocabulary. A missing row reads as free, never pro.
+      plan: subscription?.plan ?? "free",
       isPro: subscription?.plan === "pro",
       refreshAccount: () => loadAccount(userId),
       signUp: (email, password, fullName) =>

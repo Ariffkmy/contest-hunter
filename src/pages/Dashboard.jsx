@@ -12,8 +12,10 @@ import {
   Instagram,
   Lock,
   MessageSquareQuote,
+  Play,
   Share2,
   Sparkles,
+  Trash2,
   Trophy,
   Wand2
 } from "lucide-react";
@@ -28,8 +30,9 @@ import {
   setContestStatus,
   untrackContest
 } from "../services/contestsRepo.js";
-
-const FREE_TRACKING_LIMIT = 5;
+import { applyHidden, readHidden, softDelete } from "../services/hiddenContests.js";
+import { describeDeadline } from "../services/deadlines.js";
+import { can, FEATURES, FREE_TRACKING_LIMIT } from "../services/entitlements.js";
 
 const statusTabs = [
   { id: "upcoming", label: "Upcoming", description: "Not started yet" },
@@ -44,7 +47,8 @@ const statusLabels = {
 };
 
 export default function Dashboard() {
-  const { user, profile, isPro } = useAuth();
+  const { user, profile, isPro, plan } = useAuth();
+  const [hidden, setHidden] = useState(readHidden);
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
@@ -66,7 +70,7 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     const { contests: rows, error } = await fetchDashboard(user.id);
-    setContests(rows);
+    setContests(applyHidden(rows, readHidden()));
     setDataError(error);
     setLoading(false);
   }, [user.id]);
@@ -75,23 +79,28 @@ export default function Dashboard() {
     load();
   }, [load]);
 
+  const visibleContests = useMemo(
+    () => applyHidden(contests, hidden).filter((contest) => !contest.deleted),
+    [contests, hidden]
+  );
+
   const filteredContests = useMemo(
-    () => contests.filter((contest) => contest.status === activeStatus),
-    [contests, activeStatus]
+    () => visibleContests.filter((contest) => contest.status === activeStatus),
+    [visibleContests, activeStatus]
   );
 
   const statusCounts = useMemo(
     () =>
       statusTabs.reduce((counts, tab) => {
-        counts[tab.id] = contests.filter((contest) => contest.status === tab.id).length;
+        counts[tab.id] = visibleContests.filter((contest) => contest.status === tab.id).length;
         return counts;
       }, {}),
-    [contests]
+    [visibleContests]
   );
 
   const trackedCount = useMemo(
-    () => contests.filter((contest) => contest.tracked).length,
-    [contests]
+    () => visibleContests.filter((contest) => contest.tracked).length,
+    [visibleContests]
   );
   const atLimit = !isPro && trackedCount >= FREE_TRACKING_LIMIT;
 
@@ -133,10 +142,13 @@ export default function Dashboard() {
     if (!before.tracked) load();
   };
 
-  const moveSelectedToStatus = async (status) => {
-    if (!selected) return;
-    const { id } = selected;
-    const before = { status: selected.status, tracked: selected.tracked };
+  // Takes an explicit id rather than reading `selected`: the card's start
+  // button needs to move a contest that isn't the selected one, and setSelectedId
+  // wouldn't have taken effect yet in the same tick.
+  const moveContestToStatus = async (id, status) => {
+    const target = contests.find((contest) => contest.id === id);
+    if (!target) return;
+    const before = { status: target.status, tracked: target.tracked };
 
     applyLocal(id, { status, tracked: true });
     setActiveStatus(status);
@@ -153,6 +165,9 @@ export default function Dashboard() {
     if (!before.tracked) load();
   };
 
+  const moveSelectedToStatus = (status) =>
+    selected ? moveContestToStatus(selected.id, status) : undefined;
+
   const stopTracking = async (id) => {
     const target = contests.find((contest) => contest.id === id);
     if (!target) return;
@@ -163,6 +178,15 @@ export default function Dashboard() {
     }
     setLimitHit(false);
     load();
+  };
+
+  const hideContest = (contest) => {
+    const ok = window.confirm(
+      `Delete "${contest.brand}"? It moves to Deleted contests, and you can restore it any time.`
+    );
+    if (!ok) return;
+    setHidden(softDelete(hidden, contest.id));
+    if (selectedId === contest.id) setSelectedId(null);
   };
 
   const refreshIdeas = async () => {
@@ -284,6 +308,12 @@ export default function Dashboard() {
                   active={contest.id === selected?.id}
                   onSelect={() => setSelectedId(contest.id)}
                   onSave={() => toggleSaved(contest.id)}
+                  onDelete={() => hideContest(contest)}
+                  onStart={
+                    contest.status === "upcoming"
+                      ? () => moveContestToStatus(contest.id, "in_progress")
+                      : null
+                  }
                 />
               ))
             ) : (
@@ -485,7 +515,8 @@ export default function Dashboard() {
   );
 }
 
-function ContestCard({ contest, active, onSelect, onSave }) {
+function ContestCard({ contest, active, onSelect, onSave, onDelete, onStart }) {
+  const deadline = describeDeadline(contest.deadline);
   return (
     <article className={active ? "contest-card active" : "contest-card"} onClick={onSelect}>
       <div className="thumb" style={{ backgroundImage: contest.art }}>
@@ -499,6 +530,16 @@ function ContestCard({ contest, active, onSelect, onSave }) {
         >
           <Heart size={15} fill={contest.saved ? "currentColor" : "none"} />
         </button>
+        <button
+          className="save-button delete-button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          title="Delete contest"
+        >
+          <Trash2 size={15} />
+        </button>
       </div>
       <div className="card-content">
         <div className="card-title">
@@ -511,9 +552,22 @@ function ContestCard({ contest, active, onSelect, onSave }) {
           {statusLabels[contest.status]}
           {contest.tracked && <span className="tracked-dot" title="Tracking" />}
         </div>
+        <p className={`deadline-line ${deadline.urgency}`}>{deadline.label}</p>
         <p className="engagement-line">
           {contest.engagement.likes} likes · {contest.engagement.comments} comments
         </p>
+        {onStart && (
+          <button
+            className="start-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onStart();
+            }}
+          >
+            <Play size={13} />
+            Move to In progress
+          </button>
+        )}
       </div>
     </article>
   );

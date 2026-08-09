@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { LogOut, Settings as SettingsIcon, Sparkles, Trophy } from "lucide-react";
+import { LayoutDashboard, LogOut, Settings as SettingsIcon, Sparkles, Trophy } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider.jsx";
 
 export default function AppNav() {
@@ -22,6 +22,10 @@ export default function AppNav() {
       </Link>
 
       <nav className="app-nav-links">
+        <NavLink to="/home" className={({ isActive }) => (isActive ? "active" : undefined)}>
+          <LayoutDashboard size={15} />
+          Home
+        </NavLink>
         <NavLink to="/app" className={({ isActive }) => (isActive ? "active" : undefined)}>
           Contests
         </NavLink>

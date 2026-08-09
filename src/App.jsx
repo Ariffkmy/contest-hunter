@@ -9,6 +9,8 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import AuthCallback from "./pages/AuthCallback.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Home from "./pages/Home.jsx";
+import Deleted from "./pages/Deleted.jsx";
 import Settings from "./pages/Settings.jsx";
 import Pricing from "./pages/Pricing.jsx";
 
@@ -39,7 +41,7 @@ function RequireAuth({ children }) {
 function RedirectIfSignedIn({ children }) {
   const { session, loading } = useAuth();
   if (loading) return <FullPageMessage title="Loading…" />;
-  if (session) return <Navigate to="/app" replace />;
+  if (session) return <Navigate to="/home" replace />;
   return children;
 }
 
@@ -88,6 +90,23 @@ export default function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
 
           <Route
+            path="/home"
+            element={
+              <RequireAuth>
+                <Home />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/deleted"
+            element={
+              <RequireAuth>
+                <Deleted />
+              </RequireAuth>
+            }
+          />
+
+          <Route
             path="/app"
             element={
               <RequireAuth>
@@ -112,7 +131,7 @@ export default function App() {
             }
           />
 
-          <Route path="*" element={<Navigate to="/app" replace />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
