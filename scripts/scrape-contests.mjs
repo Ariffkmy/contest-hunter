@@ -455,7 +455,10 @@ if (process.argv.includes("--backfill-images")) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   let missing = [];
   try {
-    const r = await fetch(`${url}/rest/v1/contests?select=post_url&image_url=is.null&limit=1000`, {
+    // full rows: this stack validates NOT NULL on the proposed tuple before
+    // conflict resolution, so partial-row upserts are rejected (23502). Merge
+    // image_url into the existing full row instead.
+    const r = await fetch(`${url}/rest/v1/contests?select=*&image_url=is.null&limit=1000`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` }
     });
     if (r.ok) missing = await r.json();
@@ -467,7 +470,7 @@ if (process.argv.includes("--backfill-images")) {
   for (const row of missing) {
     try {
       const r = await scrapePost(cdp, row.post_url);
-      if (r?.imageUrl) { done.push({ post_url: row.post_url, image_url: r.imageUrl }); }
+      if (r?.imageUrl) { done.push({ ...row, image_url: r.imageUrl }); }
       else process.stderr.write(`  no image: ${row.post_url}\n`);
     } catch (err) { process.stderr.write(`  error ${row.post_url}: ${err.message}\n`); }
   }
