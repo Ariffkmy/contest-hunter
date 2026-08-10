@@ -12,7 +12,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { toContestRow } from "../src/services/contestMapper.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -105,6 +104,47 @@ function normalizePostUrl(url) {
   return m ? `https://www.instagram.com/p/${m[1]}/` : url;
 }
 
+
+// Row mapping (self-contained; app's contestMapper.js no longer exports toContestRow).
+function stripCaption(caption = "") {
+  return String(caption ?? "").replace(/^"|"[.]?$/g, "").trim();
+}
+
+function inferPrompt({ caption, prize }) {
+  const clean = stripCaption(caption);
+  const quoted = clean.match(/"([^"]{12,140}(?:because|why|tell|share|complete)[^"]*)"/i);
+  if (quoted?.[1]) return quoted[1].trim();
+  const sentence = clean
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .find((l) => /complete|tell us|share|why|comment|answer|describe/i.test(l));
+  if (sentence) return sentence.replace(/^[-•✅\d\s.]+/, "").trim();
+  return `What would make you the perfect winner for ${prize}?`;
+}
+
+function toContestRow(contest, meta = {}) {
+  const prize = contest.prize || "Prize not announced";
+  return {
+    post_url: contest.post_url,
+    brand: contest.brand,
+    username: contest.username,
+    profile_url: contest.profile_url ?? null,
+    caption: stripCaption(contest.caption),
+    prize,
+    prompt: inferPrompt({ caption: contest.caption, prize }),
+    conditions: contest.conditions ?? [],
+    contest_type: contest.contest_type ?? null,
+    note: contest.note ?? null,
+    deadline: contest.deadline || null,
+    posted_at: contest.posted_at || null,
+    likes: contest.engagement?.likes ?? 0,
+    comments: contest.engagement?.comments ?? 0,
+    raw_status: contest.status ?? null,
+    source: meta.source ?? null,
+    scraped_at: meta.scrapedAt ?? null
+  };
+}
+
 function sanitizeText(text) {
   // Lone surrogates are invalid UTF-8 for Postgres — drop them.
   return String(text ?? "").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
@@ -137,16 +177,22 @@ function extractConditions(caption) {
   const clean = String(caption ?? "");
   const lines = clean.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   const conditions = [];
+  const COMPLIANCE = /receipt|resit|invoice|\bIC\b|qr/i;
+  const CREATIVE = /snap|photo|video|film|record|design|draw|cook|bake|decorate/i;
   for (const line of lines) {
     const step = line
       .replace(/^\d+[).]\s*/, "")
-      .replace(/^[-•✅✨🎁👣📝💬📱🛒📸🔁\+]\s*/, "")
+      .replace(/^[-•✅✨🎁👣📝💬📱🛒📸🔁\+🔟]\s*/, "")
       .replace(/^step\s*\d+[:\-]?\s*/i, "")
+      .replace(/^[1-6]️⃣\s*/, "")
       .trim();
-    if (!step) continue;
-    if (/^(follow|like|comment|tag|share|repost|story|dm|scan|buy|purchase|beli|isi|fill|upload|post|subscribe|save|turn on)/i.test(step)) {
-      if (!conditions.includes(step) && step.length > 8 && step.length < 200) conditions.push(step);
-    }
+    if (!step || step.length < 8) continue;
+    if (!/^(follow|like|comment|tag|share|repost|story|dm|scan|buy|purchase|beli|isi|fill|upload|post|subscribe|save|turn on|ambil|hantar|whatsapp|imbas|jawab|teka|buat|create|snap|photo|video|film|cook|bake|design|register)/i.test(step)) continue;
+    // proof-of-purchase wording: keep compliance words, avoid creative verbs for receipts
+    let out = step;
+    if (COMPLIANCE.test(out)) out = out.replace(CREATIVE, "").replace(/\s{2,}/g, " ").trim();
+    if (out.length > 84) out = out.slice(0, 84).replace(/\s+\S*$/, "");
+    if (!conditions.includes(out)) conditions.push(out);
     if (conditions.length >= 6) break;
   }
   return conditions;
@@ -154,15 +200,26 @@ function extractConditions(caption) {
 
 function extractContestType(caption, conditions) {
   const text = String(caption ?? "").toLowerCase();
-  const parts = [];
-  if (/comment/.test(text) || /komen/.test(text)) parts.push("comment");
-  if (/follow/.test(text)) parts.push("follow");
-  if (/tag/.test(text)) parts.push("tag");
-  if (/share|repost|story/.test(text)) parts.push("share");
-  if (/like/.test(text)) parts.push("like");
-  if (/quiz|answer|scan/.test(text)) parts.push("quiz");
-  if (/receipt|purchase|beli|buy/.test(text)) parts.push("purchase");
-  return parts.join("+") || (conditions.length ? "entry" : null);
+  const has = (re) => re.test(text);
+  // hardest first: made > action > written (docs/scraper-agent-prompt.md)
+  if (has(/buy|beli|purchase/) && has(/video|reel|clip|photo|film/)) return "video";
+  if (has(/receipt|resit/) && has(/cook|bake|masak/)) return "cook&win";
+  if (has(/video|reel|clip/)) return "video";
+  if (has(/cook|bake|masak/)) return "cook&win";
+  if (has(/photo|foto/) && !has(/receipt|resit/)) return "photo";
+  if (has(/logo|poster|design|infografik/)) return "design";
+  if (has(/film|record/)) return "ugc";
+  if (has(/beli|purchase|receipt|resit|buy/)) return "buy&win";
+  if (has(/top.?up|subscribe|register/)) return "transaction";
+  if (has(/quiz|teka|guess|how many/)) return "quiz";
+  if (has(/caption|slogan/)) return "caption";
+  if (has(/comment|komen/)) {
+    if (has(/share|repost|story|tag/)) return "comment+share";
+    return "comment";
+  }
+  if (has(/share|repost|story/)) return "share";
+  if (has(/follow|tag/)) return "follow";
+  return null;
 }
 
 function extractDeadlines(caption, scrapedAt) {
@@ -362,6 +419,17 @@ try {
 } catch { /* first run */ }
 const previousByUrl = new Map(previous.contests.map((c) => [c.post_url, c]));
 
+
+// --seed-only: re-upsert the existing JSON dump without scraping (backfill/repair).
+if (process.argv.includes("--seed-only")) {
+  const existing = JSON.parse(readFileSync(OUT_PATH, "utf8"));
+  const dbOnly = await upsertToSupabase(existing.contests, existing.source, existing.scraped_at);
+  if (dbOnly.skipped) { console.log("SEED-ONLY: skipped (" + dbOnly.reason + ")"); }
+  else if (!dbOnly.ok) { console.log("SEED-ONLY: FAIL " + dbOnly.error); process.exitCode = 1; }
+  else { console.log(`SEED-ONLY: upserted ${dbOnly.total} (${dbOnly.added} new, ${dbOnly.updated} updated)`); }
+  process.exit(process.exitCode ?? 0);
+}
+
 process.stderr.write(`connecting to browser CDP ...\n`);
 const cdp = await connect();
 const postUrls = await collectPostUrls(cdp);
@@ -382,9 +450,13 @@ for (const url of postUrls) {
     const conditions = prev?.conditions?.length ? prev.conditions : extractConditions(caption);
     const deadline = prev?.deadline ?? extractDeadlines(caption, scrapedAt.toISOString());
     const prize = prev?.prize ?? extractPrize(caption);
-    const contest_type = prev?.contest_type ?? extractContestType(caption, conditions);
+    let contest_type = prev?.contest_type ?? extractContestType(caption, conditions);
     // status is time-sensitive (expires) — always re-derive from today's date.
     const status = inferStatus({ deadline, caption, scrapedAt: scrapedAt.toISOString() });
+    // enforce the closed contest_type vocabulary from docs/scraper-agent-prompt.md
+    if (!/^(comment|comment\+share|quiz|caption|video|reel|photo|design|cook&win|ugc|buy&win|transaction|share|follow|announcement)$/.test(contest_type ?? "")) {
+      contest_type = status === "winners" ? "announcement" : (contest_type || "comment");
+    }
     contests.push({
       brand: prev?.brand ?? brandFromTitle(title, caption, parsed.username),
       username: parsed.username,
@@ -405,6 +477,7 @@ for (const url of postUrls) {
     process.stderr.write(`  error ${url}: ${err.message}\n`);
   }
 }
+
 
 const out = { scraped_at: scrapedAtLabel, source, total: contests.length, contests };
 writeFileSync(OUT_PATH, JSON.stringify(out, null, 2));
