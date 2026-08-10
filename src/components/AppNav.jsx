@@ -1,6 +1,13 @@
 import React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, LogOut, Settings as SettingsIcon, Sparkles, Trophy } from "lucide-react";
+import {
+  LayoutDashboard,
+  LogOut,
+  Settings as SettingsIcon,
+  Sparkles,
+  Trophy,
+  UserCog
+} from "lucide-react";
 import { useAuth } from "../auth/AuthProvider.jsx";
 
 export default function AppNav() {
@@ -33,6 +40,12 @@ export default function AppNav() {
           <SettingsIcon size={15} />
           Settings
         </NavLink>
+        {profile?.is_admin && (
+          <NavLink to="/admin" className={({ isActive }) => (isActive ? "active" : undefined)}>
+            <UserCog size={15} />
+            Admin
+          </NavLink>
+        )}
       </nav>
 
       <div className="app-nav-account">

@@ -25,15 +25,23 @@ export async function fetchDashboard(userId) {
     supabase.from("user_contests").select("contest_id, status, saved").eq("user_id", userId)
   ]);
 
-  if (catalog.error) return { contests: [], error: catalog.error.message };
-  if (tracking.error) return { contests: [], error: tracking.error.message };
+  if (catalog.error) return { contests: [], meta: null, error: catalog.error.message };
+  if (tracking.error) return { contests: [], meta: null, error: tracking.error.message };
 
   const byContest = new Map(tracking.data.map((row) => [row.contest_id, row]));
   const contests = catalog.data.map((row, index) =>
     toUiContest(row, index, byContest.get(row.id) ?? null)
   );
 
-  return { contests, error: null };
+  // Catalogue freshness, same shape the mobile app reports. Rows come back
+  // newest-scrape-first, so the head row dates the whole snapshot.
+  const meta = {
+    total: catalog.data.length,
+    scrapedAt: catalog.data[0]?.scraped_at ?? null,
+    source: catalog.data[0]?.source ?? null
+  };
+
+  return { contests, meta, error: null };
 }
 
 /**

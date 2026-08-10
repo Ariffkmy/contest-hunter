@@ -1,8 +1,11 @@
-// Shared shape logic for contests.
+// Shared shape logic for contests: a public.contests row in, the shape the
+// dashboard renders out.
 //
-// Both the app (reading rows from Supabase) and the seed generator (reading the
-// scraper's JSON dump) go through here, so the derived fields — prompt, status,
-// effort — stay identical no matter which side produced them.
+// This used to run in both directions — the retired seed script built rows from
+// a JSON dump through toContestRow(), inferring `prompt` from the caption with
+// a regex. The scraper agent writes those columns itself now (see
+// docs/scraper-agent-prompt.md), so the write half is gone and there is one
+// producer of catalogue rows instead of two disagreeing ones.
 
 const statusMap = {
   teaser: "upcoming",
@@ -23,59 +26,10 @@ export function statusFromRaw(rawStatus) {
   return statusMap[rawStatus] ?? "in_progress";
 }
 
-export function stripCaption(caption = "") {
-  return caption.replace(/^"|"[.]?$/g, "").trim();
-}
-
 export function formatEffort({ contestType, conditions }) {
   const type = contestType?.replaceAll("&", " & ") ?? "entry";
   const steps = conditions?.length ?? 0;
   return `${steps} step${steps === 1 ? "" : "s"} · ${type}`;
-}
-
-export function inferPrompt({ caption, prize }) {
-  const clean = stripCaption(caption);
-  const quotedPrompt = clean.match(/"([^"]{12,140}(?:because|why|tell|share|complete)[^"]*)"/i);
-  if (quotedPrompt?.[1]) return quotedPrompt[1].trim();
-
-  const sentencePrompt = clean
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .find((line) => /complete|tell us|share|why|comment|answer|describe/i.test(line));
-
-  if (sentencePrompt) return sentencePrompt.replace(/^[-•✅\d\s.]+/, "").trim();
-  return `What would make you the perfect winner for ${prize}?`;
-}
-
-/**
- * Scraper JSON record -> the column set of public.contests.
- * Used by the seed generator; also the fallback path when Supabase is unset.
- */
-export function toContestRow(contest, meta = {}) {
-  // Some scraped posts are winner announcements rather than live giveaways and
-  // carry no prize. Keep the column NOT NULL and give them a readable stand-in,
-  // otherwise the answer generator trips over a null prize.
-  const prize = contest.prize || "Prize not announced";
-
-  return {
-    post_url: contest.post_url,
-    brand: contest.brand,
-    username: contest.username,
-    profile_url: contest.profile_url ?? null,
-    caption: stripCaption(contest.caption),
-    prize,
-    prompt: inferPrompt({ caption: contest.caption, prize }),
-    conditions: contest.conditions ?? [],
-    contest_type: contest.contest_type ?? null,
-    note: contest.note ?? null,
-    deadline: contest.deadline || null,
-    posted_at: contest.posted_at || null,
-    likes: contest.engagement?.likes ?? 0,
-    comments: contest.engagement?.comments ?? 0,
-    raw_status: contest.status ?? null,
-    source: meta.source ?? null,
-    scraped_at: meta.scrapedAt ?? null
-  };
 }
 
 /**

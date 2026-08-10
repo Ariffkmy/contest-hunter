@@ -13,6 +13,7 @@ import Home from "./pages/Home.jsx";
 import Deleted from "./pages/Deleted.jsx";
 import Settings from "./pages/Settings.jsx";
 import Pricing from "./pages/Pricing.jsx";
+import Admin from "./pages/Admin.jsx";
 
 function FullPageMessage({ title, children }) {
   return (
@@ -35,6 +36,20 @@ function RequireAuth({ children }) {
     // Remember the target so login can send them back to it.
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
+  return children;
+}
+
+/**
+ * Hides the admin console from non-admins. This is a routing convenience, not
+ * the security boundary — the admin-users function re-checks the flag under the
+ * service role, so editing the profile in devtools reveals an empty page.
+ */
+function RequireAdmin({ children }) {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <FullPageMessage title="Loading…" />;
+  if (!session) return <Navigate to="/login" replace />;
+  if (!profile?.is_admin) return <Navigate to="/home" replace />;
   return children;
 }
 
@@ -128,6 +143,15 @@ export default function App() {
               <RequireAuth>
                 <Pricing />
               </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <Admin />
+              </RequireAdmin>
             }
           />
 

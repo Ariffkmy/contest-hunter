@@ -31,17 +31,24 @@ npm run dev
 | --- | --- |
 | `VITE_SUPABASE_URL` | Supabase → Project Settings → API |
 | `VITE_SUPABASE_ANON_KEY` | same page (safe in the browser) |
-| `SUPABASE_SERVICE_ROLE_KEY` | same page — **local scripts only, never the browser** |
 
-## Seeding the catalog
 
-```bash
-node scripts/seed-contests.mjs
-```
+## Filling the catalog
 
-Upserts `src/data/instagram-giveaways.json` on `post_url`. Safe to re-run: it
-refreshes scraped fields and never touches anyone's tracking rows. Needs
-`SUPABASE_SERVICE_ROLE_KEY`, because `anon` has no INSERT on the catalog.
+`public.contests` is written by the scraper agent, which upserts on `post_url`
+directly against Supabase using the service role. Nothing in this repo writes to
+the catalog, and there is no bundled JSON snapshot — the app reads Supabase or
+it shows nothing.
+
+The contract the agent has to follow — column list, the closed `contest_type`
+vocabulary, the `YYYY-MM-DD` deadline rule, and the `conditions` wording that
+decides which kind of AI help a contest gets — lives in
+[`docs/scraper-agent-prompt.md`](docs/scraper-agent-prompt.md). Change the app's
+expectations and that prompt has to change with them.
+
+The service role key belongs in the agent's environment, not in this repo's
+`.env`: `anon` has no INSERT on the catalog, and the browser must never hold a
+key that does.
 
 ## Remaining setup (needs your accounts)
 

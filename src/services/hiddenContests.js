@@ -64,6 +64,14 @@ export function purge(state, id) {
   });
 }
 
+/**
+ * Drops the whole overlay: soft deletes and tombstones alike. The mobile app's
+ * Profile > Reset all data does the same to its AsyncStorage copy.
+ */
+export function clearHidden() {
+  return writeHidden({ deleted: {}, purgedIds: [] });
+}
+
 /** Applies the overlay to rows from contestsRepo. */
 export function applyHidden(contests, state) {
   const purged = new Set(state.purgedIds);

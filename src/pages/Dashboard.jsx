@@ -31,8 +31,9 @@ import {
   untrackContest
 } from "../services/contestsRepo.js";
 import { applyHidden, readHidden, softDelete } from "../services/hiddenContests.js";
-import { describeDeadline } from "../services/deadlines.js";
+import { describeDeadline, formatTimestamp } from "../services/deadlines.js";
 import { can, FEATURES, FREE_TRACKING_LIMIT } from "../services/entitlements.js";
+import { formatCopy } from "../services/contestFormats.js";
 
 const statusTabs = [
   { id: "upcoming", label: "Upcoming", description: "Not started yet" },
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const { user, profile, isPro, plan } = useAuth();
   const [hidden, setHidden] = useState(readHidden);
   const [contests, setContests] = useState([]);
+  const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
   const [limitHit, setLimitHit] = useState(false);
@@ -69,8 +71,9 @@ export default function Dashboard() {
   }, [profile]);
 
   const load = useCallback(async () => {
-    const { contests: rows, error } = await fetchDashboard(user.id);
+    const { contests: rows, meta: catalogMeta, error } = await fetchDashboard(user.id);
     setContests(applyHidden(rows, readHidden()));
+    setMeta(catalogMeta);
     setDataError(error);
     setLoading(false);
   }, [user.id]);
@@ -106,6 +109,10 @@ export default function Dashboard() {
 
   const selected =
     filteredContests.find((contest) => contest.id === selectedId) ?? filteredContests[0];
+
+  // What this contest asks the entrant to produce drives the whole tool panel:
+  // a video giveaway gets concepts, a buy&win gets a checklist.
+  const copy = selected ? formatCopy(selected) : null;
 
   // Drafts belong to a single contest, so clear them when the workspace moves.
   useEffect(() => {
@@ -259,7 +266,10 @@ export default function Dashboard() {
         <section className="contest-list" aria-label="Scraped Instagram contests">
           <div className="section-header">
             <div>
-              <p className="eyebrow">{contests.length} scraped giveaways</p>
+              <p className="eyebrow">
+                {meta?.total ?? contests.length} scraped giveaways · synced{" "}
+                {formatTimestamp(meta?.scrapedAt)}
+              </p>
               <h2>Your board</h2>
             </div>
             {!isPro && (
@@ -387,21 +397,26 @@ export default function Dashboard() {
               <section className="tool-panel">
                 <div className="panel-heading">
                   <div>
-                    <p className="eyebrow">Answer prompt</p>
+                    <p className="eyebrow">{copy.promptLabel}</p>
                     <h3>{selected.prompt}</h3>
                   </div>
                   <MessageSquareQuote size={20} />
                 </div>
 
+                <p className="format-note">
+                  <span className="format-chip">{copy.label}</span>
+                  {copy.blurb}
+                </p>
+
                 <label className="field-label" htmlFor="note">
-                  Personal angle
+                  {copy.inputLabel}
                 </label>
                 <textarea
                   id="note"
                   value={personalNote}
                   onChange={(event) => setPersonalNote(event.target.value)}
                   rows={4}
-                  placeholder="What makes your entry yours? Set a default in Settings."
+                  placeholder={copy.inputHint}
                 />
 
                 <div className="tone-row" role="group" aria-label="Tone">
@@ -418,30 +433,30 @@ export default function Dashboard() {
 
                 <button className="generate-button" onClick={refreshIdeas} disabled={generating}>
                   <Wand2 size={17} />
-                  {generating ? "Writing…" : "Generate answer ideas"}
+                  {generating ? "Thinking…" : copy.action}
                 </button>
               </section>
 
               <section className="tool-panel">
                 <div className="panel-heading">
                   <div>
-                    <p className="eyebrow">{isPro ? "AI recommendations" : "Template drafts"}</p>
-                    <h3>Unique drafts</h3>
+                    <p className="eyebrow">
+                      {isPro ? "AI" : "Template"} · {copy.outputEyebrow}
+                    </p>
+                    <h3>{copy.outputTitle}</h3>
                   </div>
                   <Sparkles size={20} />
                 </div>
 
                 {!isPro && (
                   <p className="field-hint upsell">
-                    <Lock size={13} /> Real AI drafts are a Pro feature.{" "}
+                    <Lock size={13} /> Real AI ideas are a Pro feature.{" "}
                     <Link to="/pricing">Upgrade</Link>
                   </p>
                 )}
 
                 <div className="ideas">
-                  {ideas.length === 0 && (
-                    <p className="field-hint">Hit Generate to draft three answers.</p>
-                  )}
+                  {ideas.length === 0 && <p className="field-hint">{copy.emptyHint}</p>}
                   {ideas.map((idea) => (
                     <article className="idea" key={idea}>
                       <p>{idea}</p>

@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CreditCard, Sparkles } from "lucide-react";
+import { CreditCard, Heart, RefreshCw, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import AppNav from "../components/AppNav.jsx";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { supabase } from "../services/supabaseClient.js";
 import { openBillingPortal } from "../services/billing.js";
+import { fetchDashboard } from "../services/contestsRepo.js";
+import { applyHidden, clearHidden, readHidden } from "../services/hiddenContests.js";
+import { formatTimestamp } from "../services/deadlines.js";
+import { FREE_TRACKING_LIMIT } from "../services/entitlements.js";
 import { FormError, FormNotice } from "./AuthShell.jsx";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -23,6 +27,12 @@ export default function Settings() {
   const [passwordState, setPasswordState] = useState({ busy: false, error: "", notice: "" });
 
   const [portalState, setPortalState] = useState({ busy: false, error: "" });
+  const [planState, setPlanState] = useState({ busy: false, notice: "" });
+
+  // The board is read here only for the usage meter and the Data counts, so a
+  // failure is silent: Settings still has to work when the catalogue is down.
+  const [board, setBoard] = useState({ contests: [], meta: null });
+  const [hidden, setHidden] = useState(readHidden);
 
   useEffect(() => {
     if (!profile) return;
@@ -30,6 +40,29 @@ export default function Settings() {
     setDefaultTone(profile.default_tone ?? "Warm");
     setPersonalNote(profile.personal_note ?? "");
   }, [profile]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { contests, meta } = await fetchDashboard(user.id);
+      if (!cancelled) setBoard({ contests, meta });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  const counts = useMemo(() => {
+    const rows = applyHidden(board.contests, hidden);
+    const live = rows.filter((contest) => !contest.deleted);
+    return {
+      tracked: live.filter((contest) => contest.tracked).length,
+      saved: live.filter((contest) => contest.saved).length,
+      deleted: rows.filter((contest) => contest.deleted).length
+    };
+  }, [board.contests, hidden]);
+
+  const usagePercent = Math.min(100, (counts.tracked / FREE_TRACKING_LIMIT) * 100);
 
   const saveProfile = async (event) => {
     event.preventDefault();
@@ -88,6 +121,27 @@ export default function Settings() {
       return;
     }
     window.location.href = url;
+  };
+
+  // Stripe writes the plan through a webhook, so a checkout that just completed
+  // can land here before the subscription row does. Mobile has the same button.
+  const refreshPlan = async () => {
+    setPlanState({ busy: true, notice: "" });
+    await refreshAccount();
+    setPlanState({ busy: false, notice: "Plan refreshed." });
+  };
+
+  /**
+   * Clears the local view overlay only. Tracking, saved contests and the
+   * profile live in Postgres and are shared with the mobile app — wiping those
+   * from a "reset" button would destroy real data, so this stops at the
+   * device-local soft deletes.
+   */
+  const resetLocalData = () => {
+    const ok = window.confirm(
+      "Restore every deleted contest on this device? Your tracking, saved contests and profile are left alone."
+    );
+    if (ok) setHidden(clearHidden());
   };
 
   const handleSignOut = async () => {
@@ -196,15 +250,100 @@ export default function Settings() {
             </>
           ) : (
             <>
+              <div className="usage-meter">
+                <div className="progress-head">
+                  <span>Contests tracked</span>
+                  <strong>
+                    {counts.tracked} / {FREE_TRACKING_LIMIT}
+                  </strong>
+                </div>
+                <div className="progress-track">
+                  <div
+                    className={
+                      counts.tracked >= FREE_TRACKING_LIMIT
+                        ? "progress-fill at-limit"
+                        : "progress-fill"
+                    }
+                    style={{ width: `${usagePercent}%` }}
+                  />
+                </div>
+              </div>
               <p className="field-hint">
-                Tracking up to 5 contests, with template drafts. Pro removes the limit and writes
-                real AI drafts.
+                Free tracks {FREE_TRACKING_LIMIT} contests at a time, with template drafts. Pro
+                removes the limit and writes real AI drafts.
               </p>
               <Link className="generate-button" to="/pricing">
                 Upgrade to Pro
               </Link>
             </>
           )}
+
+          <button className="quiet-link icon-inline" onClick={refreshPlan} disabled={planState.busy}>
+            <RefreshCw size={14} />
+            {planState.busy ? "Refreshing…" : "Refresh plan"}
+          </button>
+          <FormNotice>{planState.notice}</FormNotice>
+        </section>
+
+        <section className="tool-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Data</p>
+              <h3>Your board</h3>
+            </div>
+          </div>
+
+          <ul className="data-rows">
+            <li>
+              <Trash2 size={16} />
+              <span>Deleted contests</span>
+              <strong>{counts.deleted}</strong>
+              <Link className="quiet-link" to="/deleted">
+                Review
+              </Link>
+            </li>
+            <li>
+              <Heart size={16} />
+              <span>Saved contests</span>
+              <strong>{counts.saved}</strong>
+            </li>
+            <li>
+              <RotateCcw size={16} />
+              <span>Restore deleted contests</span>
+              <button className="quiet-link danger" onClick={resetLocalData}>
+                Reset
+              </button>
+            </li>
+          </ul>
+
+          <p className="field-hint">
+            Deleting a contest only hides it on this device, so this reset is per-browser. It does
+            not touch the shared catalogue, your tracking, or the mobile app.
+          </p>
+        </section>
+
+        <section className="tool-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">About</p>
+              <h3>Catalogue</h3>
+            </div>
+          </div>
+
+          <ul className="data-rows">
+            <li>
+              <span>Contests synced</span>
+              <strong>{formatTimestamp(board.meta?.scrapedAt)}</strong>
+            </li>
+            <li>
+              <span>Giveaways in catalogue</span>
+              <strong>{board.meta?.total ?? 0}</strong>
+            </li>
+            <li>
+              <span>Source</span>
+              <strong>{board.meta?.source ?? "Instagram"}</strong>
+            </li>
+          </ul>
         </section>
 
         <section className="tool-panel">

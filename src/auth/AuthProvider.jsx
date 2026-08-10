@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabaseClient.js";
+import { recordLogin } from "../services/admin.js";
 
 const AuthContext = createContext(null);
 
@@ -47,9 +48,14 @@ export function AuthProvider({ children }) {
       });
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       loadAccount(nextSession?.user?.id ?? null);
+
+      // Only the real sign-in event: SIGNED_IN also fires on tab focus and on
+      // token refresh in some versions, but INITIAL_SESSION covers the reload
+      // case, so restricting to SIGNED_IN keeps the audit trail to actual logins.
+      if (event === "SIGNED_IN") recordLogin();
     });
 
     return () => {
@@ -72,6 +78,8 @@ export function AuthProvider({ children }) {
       // mobile app's vocabulary. A missing row reads as free, never pro.
       plan: subscription?.plan ?? "free",
       isPro: subscription?.plan === "pro",
+      // Display/routing only. Every admin read is re-authorised server-side.
+      isAdmin: Boolean(profile?.is_admin),
       refreshAccount: () => loadAccount(userId),
       signUp: (email, password, fullName) =>
         supabase.auth.signUp({
