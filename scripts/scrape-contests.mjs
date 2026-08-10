@@ -447,6 +447,46 @@ if (process.argv.includes("--seed-only")) {
   process.exit(process.exitCode ?? 0);
 }
 
+
+// --backfill-images: visit DB rows missing image_url, grab og:image, upsert.
+if (process.argv.includes("--backfill-images")) {
+  const env = loadEnv();
+  const url = env.VITE_SUPABASE_URL;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  let missing = [];
+  try {
+    const r = await fetch(`${url}/rest/v1/contests?select=post_url&image_url=is.null&limit=1000`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` }
+    });
+    if (r.ok) missing = await r.json();
+  } catch { /* non-fatal */ }
+  if (!missing.length) { console.log("BACKFILL: nothing missing"); process.exit(0); }
+  process.stderr.write(`backfilling ${missing.length} posts ...\n`);
+  const cdp = await connect();
+  const done = [];
+  for (const row of missing) {
+    try {
+      const r = await scrapePost(cdp, row.post_url);
+      if (r?.imageUrl) { done.push({ post_url: row.post_url, image_url: r.imageUrl }); }
+      else process.stderr.write(`  no image: ${row.post_url}\n`);
+    } catch (err) { process.stderr.write(`  error ${row.post_url}: ${err.message}\n`); }
+  }
+  cdp.ws.close();
+  if (!done.length) { console.log("BACKFILL: no images found"); process.exit(0); }
+  const res = await fetch(`${url}/rest/v1/contests?on_conflict=post_url`, {
+    method: "POST",
+    headers: {
+      apikey: key, Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal"
+    },
+    body: JSON.stringify(done)
+  });
+  if (!res.ok) { console.log("BACKFILL: FAIL " + `${res.status}: ${(await res.text()).slice(0, 300)}`); process.exit(1); }
+  console.log(`BACKFILL: ${done.length}/${missing.length} images added`);
+  process.exit(0);
+}
+
 process.stderr.write(`connecting to browser CDP ...\n`);
 const cdp = await connect();
 const postUrls = await collectPostUrls(cdp);
