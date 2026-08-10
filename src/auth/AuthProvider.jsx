@@ -91,6 +91,10 @@ export function AuthProvider({ children }) {
           }
         }),
       signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
+      // Kept, but no longer wired to a button: every OAuth provider is disabled
+      // on the Supabase project, so the sign-in pages offered a control that
+      // could only fail. Re-add <GoogleButton> to Login/Register once Google is
+      // enabled in Authentication -> Providers.
       signInWithGoogle: () =>
         supabase.auth.signInWithOAuth({
           provider: "google",

@@ -13,11 +13,11 @@ import { supabase } from "./supabaseClient.js";
 import { generateIdeasFor } from "./answerRecommender.js";
 import { detectFormat } from "./contestFormats.js";
 
-export async function generateIdeas({ contest, tone, personalNote, isPro }) {
+export async function generateIdeas({ contest, personalNote, isPro }) {
   const format = detectFormat(contest);
 
   if (!isPro) {
-    return { ideas: generateIdeasFor(contest, tone, personalNote), model: null, error: null };
+    return { ideas: generateIdeasFor(contest, personalNote), model: null, error: null };
   }
 
   const { data, error } = await supabase.functions.invoke("generate-answer", {
@@ -32,7 +32,6 @@ export async function generateIdeas({ contest, tone, personalNote, isPro }) {
         deadline: contest.deadline
       },
       format,
-      tone,
       personalAngle: personalNote
     }
   });
@@ -40,7 +39,7 @@ export async function generateIdeas({ contest, tone, personalNote, isPro }) {
   if (error) {
     // Fall back rather than leave the user with nothing, but say what happened.
     return {
-      ideas: generateIdeasFor(contest, tone, personalNote),
+      ideas: generateIdeasFor(contest, personalNote),
       model: null,
       error: `AI ideas unavailable (${error.message}). Showing template ideas instead.`
     };
@@ -48,7 +47,7 @@ export async function generateIdeas({ contest, tone, personalNote, isPro }) {
 
   if (data?.error) {
     return {
-      ideas: generateIdeasFor(contest, tone, personalNote),
+      ideas: generateIdeasFor(contest, personalNote),
       model: null,
       error: `${data.error} Showing template ideas instead.`
     };

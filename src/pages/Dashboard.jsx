@@ -57,7 +57,6 @@ export default function Dashboard() {
   const [limitHit, setLimitHit] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [activeStatus, setActiveStatus] = useState("in_progress");
-  const [tone, setTone] = useState("Warm");
   const [personalNote, setPersonalNote] = useState("");
   const [ideas, setIdeas] = useState([]);
   const [generating, setGenerating] = useState(false);
@@ -66,7 +65,6 @@ export default function Dashboard() {
   // Seed the workspace controls from the user's saved defaults once loaded.
   useEffect(() => {
     if (!profile) return;
-    setTone(profile.default_tone ?? "Warm");
     setPersonalNote(profile.personal_note ?? "");
   }, [profile]);
 
@@ -201,7 +199,6 @@ export default function Dashboard() {
     setGenerating(true);
     const { ideas: nextIdeas, model, error } = await generateIdeas({
       contest: selected,
-      tone,
       personalNote,
       isPro
     });
@@ -214,7 +211,6 @@ export default function Dashboard() {
       saveAnswerDraft({
         userId: user.id,
         contestId: selected.id,
-        tone,
         personalAngle: personalNote,
         answer,
         model
@@ -419,17 +415,6 @@ export default function Dashboard() {
                   placeholder={copy.inputHint}
                 />
 
-                <div className="tone-row" role="group" aria-label="Tone">
-                  {["Warm", "Funny", "Premium", "Bold"].map((toneName) => (
-                    <button
-                      key={toneName}
-                      className={tone === toneName ? "tone active" : "tone"}
-                      onClick={() => setTone(toneName)}
-                    >
-                      {toneName}
-                    </button>
-                  ))}
-                </div>
 
                 <button className="generate-button" onClick={refreshIdeas} disabled={generating}>
                   <Wand2 size={17} />

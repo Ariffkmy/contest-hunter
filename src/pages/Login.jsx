@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
-import { AuthShell, FormError, GoogleButton } from "./AuthShell.jsx";
+import { AuthShell, FormError } from "./AuthShell.jsx";
 
 export default function Login() {
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
@@ -26,12 +26,6 @@ export default function Login() {
       return;
     }
     navigate(destination, { replace: true });
-  };
-
-  const handleGoogle = async () => {
-    setError("");
-    const { error: oauthError } = await signInWithGoogle();
-    if (oauthError) setError(oauthError.message);
   };
 
   return (
@@ -81,10 +75,6 @@ export default function Login() {
         </button>
       </form>
 
-      <div className="auth-divider">
-        <span>or</span>
-      </div>
-      <GoogleButton onClick={handleGoogle} disabled={busy} />
     </AuthShell>
   );
 }

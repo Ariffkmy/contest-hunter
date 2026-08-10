@@ -74,11 +74,14 @@ export async function untrackContest(userId, contestId) {
   return { error: error?.message ?? null };
 }
 
-export async function saveAnswerDraft({ userId, contestId, tone, personalAngle, answer, model }) {
+export async function saveAnswerDraft({ userId, contestId, personalAngle, answer, model }) {
   const { error } = await supabase.from("answer_drafts").insert({
     user_id: userId,
     contest_id: contestId,
-    tone,
+    // answer_drafts.tone is NOT NULL and tone is no longer a user choice.
+    // Write a fixed marker rather than migrate the live table; the column
+    // is vestigial and can be dropped when convenient.
+    tone: "standard",
     personal_angle: personalAngle,
     answer,
     model: model ?? null

@@ -18,7 +18,6 @@ export default function Settings() {
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState("");
-  const [defaultTone, setDefaultTone] = useState("Warm");
   const [personalNote, setPersonalNote] = useState("");
   const [profileState, setProfileState] = useState({ busy: false, error: "", notice: "" });
 
@@ -37,7 +36,6 @@ export default function Settings() {
   useEffect(() => {
     if (!profile) return;
     setFullName(profile.full_name ?? "");
-    setDefaultTone(profile.default_tone ?? "Warm");
     setPersonalNote(profile.personal_note ?? "");
   }, [profile]);
 
@@ -72,7 +70,6 @@ export default function Settings() {
       .from("profiles")
       .update({
         full_name: fullName.trim() || null,
-        default_tone: defaultTone,
         personal_note: personalNote
       })
       .eq("id", user.id);
@@ -183,21 +180,6 @@ export default function Settings() {
               onChange={(event) => setFullName(event.target.value)}
             />
 
-            <label className="field-label" htmlFor="tone">
-              Default tone
-            </label>
-            <div className="tone-row" role="group" aria-label="Default tone">
-              {["Warm", "Funny", "Premium", "Bold"].map((toneName) => (
-                <button
-                  key={toneName}
-                  type="button"
-                  className={defaultTone === toneName ? "tone active" : "tone"}
-                  onClick={() => setDefaultTone(toneName)}
-                >
-                  {toneName}
-                </button>
-              ))}
-            </div>
 
             <label className="field-label" htmlFor="personalNote">
               Default personal angle

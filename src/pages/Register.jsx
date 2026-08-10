@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
-import { AuthShell, FormError, FormNotice, GoogleButton } from "./AuthShell.jsx";
+import { AuthShell, FormError, FormNotice } from "./AuthShell.jsx";
 
 const MIN_PASSWORD_LENGTH = 8;
 
 export default function Register() {
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -41,12 +41,6 @@ export default function Register() {
       return;
     }
     navigate("/app", { replace: true });
-  };
-
-  const handleGoogle = async () => {
-    setError("");
-    const { error: oauthError } = await signInWithGoogle();
-    if (oauthError) setError(oauthError.message);
   };
 
   return (
@@ -105,10 +99,6 @@ export default function Register() {
         </button>
       </form>
 
-      <div className="auth-divider">
-        <span>or</span>
-      </div>
-      <GoogleButton onClick={handleGoogle} disabled={busy} label="Sign up with Google" />
     </AuthShell>
   );
 }

@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
     if (!apiKey) return json({ error: "OPENROUTER_API_KEY is not configured" }, 500);
 
-    const { contest, tone, personalAngle, format } = await req.json();
+    const { contest, personalAngle, format } = await req.json();
     const systemPrompt = PROMPTS[format] ?? PROMPTS.text;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
         model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: JSON.stringify({ contest, tone, personalAngle, format }) }
+          { role: "user", content: JSON.stringify({ contest, personalAngle, format }) }
         ],
         // Concepts benefit from range; a compliance checklist does not.
         temperature: format === "action" ? 0.4 : 0.9
