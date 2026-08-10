@@ -334,7 +334,14 @@ export default function Dashboard() {
         {selected ? (
           <section className="workspace" aria-label="Contest workspace">
             <div className="detail-band">
-              <div className="contest-art" style={{ backgroundImage: selected.art }}>
+              <div
+                className="contest-art"
+                style={{
+                  backgroundImage: selected.imageUrl ? `url(${selected.imageUrl})` : selected.art,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center"
+                }}
+              >
                 <span>{selected.source}</span>
               </div>
               <div className="detail-main">
@@ -519,7 +526,14 @@ function ContestCard({ contest, active, onSelect, onSave, onDelete, onStart }) {
   const deadline = describeDeadline(contest.deadline);
   return (
     <article className={active ? "contest-card active" : "contest-card"} onClick={onSelect}>
-      <div className="thumb" style={{ backgroundImage: contest.art }}>
+      <div
+        className="thumb"
+        style={{
+          backgroundImage: contest.imageUrl ? `url(${contest.imageUrl})` : contest.art,
+          backgroundSize: "cover",
+          backgroundPosition: "center"
+        }}
+      >
         <button
           className={contest.saved ? "save-button saved" : "save-button"}
           onClick={(event) => {

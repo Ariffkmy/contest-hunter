@@ -131,6 +131,7 @@ function toContestRow(contest, meta = {}) {
     profile_url: contest.profile_url ?? null,
     caption: stripCaption(contest.caption),
     prize,
+    image_url: contest.image_url ?? null,
     prompt: inferPrompt({ caption: contest.caption, prize }),
     conditions: contest.conditions ?? [],
     contest_type: contest.contest_type ?? null,
@@ -344,10 +345,13 @@ async function scrapePost({ navigate, evaluate }, url) {
   }
   const title = await evaluate(`document.querySelector('meta[property="og:title"]')?.content ?? null`).catch(() => null);
   const canonical = await evaluate(`document.querySelector('link[rel="canonical"]')?.href ?? null`).catch(() => null);
+  // the contest poster: og:image is the post's display image (also a fallback
+  // selector for carousels, which put the first image here too)
+  const imageUrl = await evaluate(`document.querySelector('meta[property="og:image"]')?.content ?? null`).catch(() => null);
   const parsed = parseOgDescription(desc);
   if (!parsed) return null;
   const postUrl = normalizePostUrl(canonical?.includes("/p/") ? canonical : url);
-  return { parsed, title, postUrl };
+  return { parsed, title, postUrl, imageUrl };
 }
 
 // ---------- Supabase direct upsert ----------
@@ -390,18 +394,31 @@ async function upsertToSupabase(contests, source, scrapedAtLabel) {
     }
   } catch { /* non-fatal */ }
 
-  const res = await fetch(`${url}/rest/v1/contests?on_conflict=post_url`, {
-    method: "POST",
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      Prefer: "resolution=merge-duplicates,return=minimal"
-    },
-    body: JSON.stringify(rows)
-  });
+  const doPost = async (payload) => {
+    const res = await fetch(`${url}/rest/v1/contests?on_conflict=post_url`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify(payload)
+    });
+    return res;
+  };
+  let res = await doPost(rows);
+  // column not deployed yet (image_url) — retry without it so the pipeline
+  // never blocks on a pending migration
   if (!res.ok) {
-    return { skipped: false, ok: false, error: `${res.status}: ${(await res.text()).slice(0, 300)}` };
+    const errText = (await res.text()).slice(0, 300);
+    if (errText.includes("42703") && rows.some((r) => "image_url" in r)) {
+      const slim = rows.map(({ image_url, ...rest }) => rest);
+      process.stderr.write("SUPABASE: image_url column missing, retrying without it (run the ALTER TABLE)\n");
+      res = await doPost(slim);
+      if (res.ok) return { skipped: false, ok: true, total: slim.length, added: 0, updated: slim.length, pendingColumn: "image_url" };
+    }
+    return { skipped: false, ok: false, error: `${res.status}: ${errText}` };
   }
   const added = rows.filter((r) => !existing.has(r.post_url)).length;
   const updated = rows.length - added;
@@ -443,7 +460,7 @@ for (const url of postUrls) {
   try {
     const r = await scrapePost(cdp, url);
     if (!r) { process.stderr.write(`  skip (no meta): ${url}\n`); continue; }
-    const { parsed, title, postUrl } = r;
+    const { parsed, title, postUrl, imageUrl } = r;
     if (!postUrl) continue;
     const prev = previousByUrl.get(postUrl);
     const caption = sanitizeText(parsed.caption || prev?.caption || "");
@@ -466,6 +483,7 @@ for (const url of postUrls) {
       prize,
       conditions,
       deadline,
+      image_url: imageUrl ?? prev?.image_url ?? null,
       contest_type,
       status,
       note: prev?.note ?? null,
