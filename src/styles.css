@@ -350,6 +350,14 @@ h1 {
   margin-top: 16px;
 }
 
+.no-ideas-note {
+  background: rgba(255,255,255,.45);
+  border: 1px dashed rgba(0,0,0,.18);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+.no-ideas-note h3 { margin: 4px 0 8px; font-size: 17px; }
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);

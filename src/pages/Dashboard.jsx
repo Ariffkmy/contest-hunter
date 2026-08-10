@@ -33,7 +33,7 @@ import {
 import { applyHidden, readHidden, softDelete } from "../services/hiddenContests.js";
 import { describeDeadline, formatTimestamp } from "../services/deadlines.js";
 import { can, FEATURES, FREE_TRACKING_LIMIT } from "../services/entitlements.js";
-import { formatCopy } from "../services/contestFormats.js";
+import { formatCopy, requiresCommentAnswer } from "../services/contestFormats.js";
 
 const statusTabs = [
   { id: "upcoming", label: "Upcoming", description: "Not started yet" },
@@ -111,6 +111,7 @@ export default function Dashboard() {
   // What this contest asks the entrant to produce drives the whole tool panel:
   // a video giveaway gets concepts, a buy&win gets a checklist.
   const copy = selected ? formatCopy(selected) : null;
+  const needsCommentAnswer = selected ? requiresCommentAnswer(selected) : false;
 
   // Drafts belong to a single contest, so clear them when the workspace moves.
   useEffect(() => {
@@ -396,71 +397,79 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="workspace-grid">
-              <section className="tool-panel">
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">{copy.promptLabel}</p>
-                    <h3>{selected.prompt}</h3>
+            {needsCommentAnswer ? (
+              <div className="workspace-grid">
+                <section className="tool-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <p className="eyebrow">{copy.promptLabel}</p>
+                      <h3>{selected.prompt}</h3>
+                    </div>
+                    <MessageSquareQuote size={20} />
                   </div>
-                  <MessageSquareQuote size={20} />
-                </div>
 
-                <p className="format-note">
-                  <span className="format-chip">{copy.label}</span>
-                  {copy.blurb}
-                </p>
-
-                <label className="field-label" htmlFor="note">
-                  {copy.inputLabel}
-                </label>
-                <textarea
-                  id="note"
-                  value={personalNote}
-                  onChange={(event) => setPersonalNote(event.target.value)}
-                  rows={4}
-                  placeholder={copy.inputHint}
-                />
-
-
-                <button className="generate-button" onClick={refreshIdeas} disabled={generating}>
-                  <Wand2 size={17} />
-                  {generating ? "Thinking…" : copy.action}
-                </button>
-              </section>
-
-              <section className="tool-panel">
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">
-                      {isPro ? "AI" : "Template"} · {copy.outputEyebrow}
-                    </p>
-                    <h3>{copy.outputTitle}</h3>
-                  </div>
-                  <Sparkles size={20} />
-                </div>
-
-                {!isPro && (
-                  <p className="field-hint upsell">
-                    <Lock size={13} /> Real AI ideas are a Pro feature.{" "}
-                    <Link to="/pricing">Upgrade</Link>
+                  <p className="format-note">
+                    <span className="format-chip">{copy.label}</span>
+                    {copy.blurb}
                   </p>
-                )}
 
-                <div className="ideas">
-                  {ideas.length === 0 && <p className="field-hint">{copy.emptyHint}</p>}
-                  {ideas.map((idea) => (
-                    <article className="idea" key={idea}>
-                      <p>{idea}</p>
-                      <button className="copy-button" onClick={() => copyIdea(idea)}>
-                        {copied === idea ? <Check size={16} /> : <Copy size={16} />}
-                        {copied === idea ? "Copied" : "Copy"}
-                      </button>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            </div>
+                  <label className="field-label" htmlFor="note">
+                    {copy.inputLabel}
+                  </label>
+                  <textarea
+                    id="note"
+                    value={personalNote}
+                    onChange={(event) => setPersonalNote(event.target.value)}
+                    rows={4}
+                    placeholder={copy.inputHint}
+                  />
+
+
+                  <button className="generate-button" onClick={refreshIdeas} disabled={generating}>
+                    <Wand2 size={17} />
+                    {generating ? "Thinking…" : copy.action}
+                  </button>
+                </section>
+
+                <section className="tool-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <p className="eyebrow">
+                        {isPro ? "AI" : "Template"} · {copy.outputEyebrow}
+                      </p>
+                      <h3>{copy.outputTitle}</h3>
+                    </div>
+                    <Sparkles size={20} />
+                  </div>
+
+                  {!isPro && (
+                    <p className="field-hint upsell">
+                      <Lock size={13} /> Real AI ideas are a Pro feature.{" "}
+                      <Link to="/pricing">Upgrade</Link>
+                    </p>
+                  )}
+
+                  <div className="ideas">
+                    {ideas.length === 0 && <p className="field-hint">{copy.emptyHint}</p>}
+                    {ideas.map((idea) => (
+                      <article className="idea" key={idea}>
+                        <p>{idea}</p>
+                        <button className="copy-button" onClick={() => copyIdea(idea)}>
+                          {copied === idea ? <Check size={16} /> : <Copy size={16} />}
+                          {copied === idea ? "Copied" : "Copy"}
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            ) : (
+              <div className="no-ideas-note">
+                <p className="eyebrow">No answer ideas</p>
+                <h3>This contest isn't won by commenting</h3>
+                <p className="field-hint">{copy.blurb}</p>
+              </div>
+            )}
 
             <section className="conditions-band">
               <div>

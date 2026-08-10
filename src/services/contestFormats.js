@@ -156,3 +156,12 @@ export function detectFormat(contest) {
 export function formatCopy(contest) {
   return FORMAT_COPY[detectFormat(contest)] ?? FORMAT_COPY[FORMATS.TEXT];
 }
+
+/**
+ * Answer Ideas (comment drafts) only make sense when the contest is actually
+ * won by writing something in the comments. Media, action and closed contests
+ * get no ideas panel — the UI hides the generator for them.
+ */
+export function requiresCommentAnswer(contest) {
+  return detectFormat(contest) === FORMATS.TEXT;
+}
