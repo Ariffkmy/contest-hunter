@@ -412,7 +412,7 @@ async function upsertToSupabase(contests, source, scrapedAtLabel) {
   // never blocks on a pending migration
   if (!res.ok) {
     const errText = (await res.text()).slice(0, 300);
-    if (errText.includes("42703") && rows.some((r) => "image_url" in r)) {
+    if (/42703|PGRST204/.test(errText) && rows.some((r) => "image_url" in r)) {
       const slim = rows.map(({ image_url, ...rest }) => rest);
       process.stderr.write("SUPABASE: image_url column missing, retrying without it (run the ALTER TABLE)\n");
       res = await doPost(slim);
