@@ -19,3 +19,4 @@ npm-debug.log*
 # Editor
 .vscode/
 .idea/
+src/data/instagram-giveaways.json
