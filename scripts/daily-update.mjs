@@ -28,8 +28,9 @@ function run(label, args, opts = {}) {
   return { label, ok: r.status === 0, status: r.status, tail, errTail };
 }
 
+const MAX_POSTS = process.env.CH_MAX_POSTS ?? "50";
 // 1. scrape
-const scrape = run("scrape", ["scripts/scrape-contests.mjs"], { env: { ...process.env, CH_MAX_POSTS: "50" } });
+const scrape = run("scrape", ["scripts/scrape-contests.mjs"], { env: { ...process.env, CH_MAX_POSTS: MAX_POSTS } });
 console.log(`SCRAPE ${scrape.ok ? "OK" : "FAIL"} (exit ${scrape.status})`);
 if (scrape.tail) console.log("  out:", scrape.tail);
 if (scrape.errTail) console.log("  log:", scrape.errTail);
