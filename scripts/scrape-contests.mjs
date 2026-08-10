@@ -12,6 +12,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { toContestRow } from "../src/services/contestMapper.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -292,6 +293,64 @@ async function scrapePost({ navigate, evaluate }, url) {
   return { parsed, title, postUrl };
 }
 
+// ---------- Supabase direct upsert ----------
+function loadEnv() {
+  const env = { ...process.env };
+  try {
+    const raw = readFileSync(resolve(root, ".env"), "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (!match) continue;
+      const [, key, value] = match;
+      if (!env[key]) env[key] = value.replace(/^["']|["']$/g, "");
+    }
+  } catch { /* no .env, use real env */ }
+  return env;
+}
+
+async function upsertToSupabase(contests, source, scrapedAtLabel) {
+  const env = loadEnv();
+  const url = env.VITE_SUPABASE_URL;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    return { skipped: true, reason: "no SUPABASE_SERVICE_ROLE_KEY in .env" };
+  }
+  const rows = contests.map((c) => toContestRow(c, { source, scrapedAt: scrapedAtLabel }));
+
+  // existing post_urls -> count how many are new
+  const existing = new Set();
+  try {
+    let all = [];
+    for (let from = 0; ; from += 1000) {
+      const r = await fetch(`${url}/rest/v1/contests?select=post_url&order=post_url&offset=${from}&limit=1000`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` }
+      });
+      if (!r.ok) break;
+      const batch = await r.json();
+      if (!batch.length) break;
+      batch.forEach((b) => existing.add(b.post_url));
+      if (batch.length < 1000) break;
+    }
+  } catch { /* non-fatal */ }
+
+  const res = await fetch(`${url}/rest/v1/contests?on_conflict=post_url`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal"
+    },
+    body: JSON.stringify(rows)
+  });
+  if (!res.ok) {
+    return { skipped: false, ok: false, error: `${res.status}: ${(await res.text()).slice(0, 300)}` };
+  }
+  const added = rows.filter((r) => !existing.has(r.post_url)).length;
+  const updated = rows.length - added;
+  return { skipped: false, ok: true, total: rows.length, added, updated };
+}
+
 // ---------- main ----------
 const scrapedAt = new Date();
 const scrapedAtLabel = scrapedAt.toISOString().slice(0, 19).replace("T", " ") + "+08:00";
@@ -349,6 +408,16 @@ for (const url of postUrls) {
 
 const out = { scraped_at: scrapedAtLabel, source, total: contests.length, contests };
 writeFileSync(OUT_PATH, JSON.stringify(out, null, 2));
+
+const db = await upsertToSupabase(contests, source, scrapedAtLabel);
+if (db.skipped) {
+  process.stderr.write(`SUPABASE: skipped (${db.reason})\n`);
+} else if (!db.ok) {
+  process.stderr.write(`SUPABASE: FAIL ${db.error}\n`);
+} else {
+  process.stderr.write(`SUPABASE: upserted ${db.total} (${db.added} new, ${db.updated} updated)\n`);
+}
+
 cdp.ws.close();
 process.stderr.write(`\nDone: ${contests.length} contests -> ${OUT_PATH}\n`);
-console.log(JSON.stringify({ total: contests.length, scraped_at: scrapedAtLabel, source }, null, 2));
+console.log(JSON.stringify({ total: contests.length, scraped_at: scrapedAtLabel, source, supabase: db }, null, 2));
