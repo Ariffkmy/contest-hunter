@@ -14,6 +14,7 @@ import Deleted from "./pages/Deleted.jsx";
 import Settings from "./pages/Settings.jsx";
 import Pricing from "./pages/Pricing.jsx";
 import Admin from "./pages/Admin.jsx";
+import Landing from "./pages/Landing.jsx";
 
 function FullPageMessage({ title, children }) {
   return (
@@ -76,6 +77,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          {/* Public marketing landing page. */}
+          <Route path="/" element={<Landing />} />
+
           <Route
             path="/login"
             element={
@@ -155,7 +159,7 @@ export default function App() {
             }
           />
 
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

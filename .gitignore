@@ -23,3 +23,4 @@ src/data/instagram-giveaways.json
 
 # Supabase CLI local state
 supabase/.temp/
+.vercel
