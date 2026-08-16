@@ -4,17 +4,21 @@ import {
   Bell,
   CalendarClock,
   Check,
+  CheckSquare2,
+  ChevronDown,
   ChevronRight,
   Circle,
   Copy,
   ExternalLink,
   Heart,
   Instagram,
+  ListFilter,
   Lock,
   MessageSquareQuote,
   Play,
   Share2,
   Sparkles,
+  Square,
   Trash2,
   Trophy,
   Wand2,
@@ -58,6 +62,8 @@ export default function Dashboard() {
   const [limitHit, setLimitHit] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [activeStatus, setActiveStatus] = useState("in_progress");
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
   const [personalNote, setPersonalNote] = useState("");
   const [ideas, setIdeas] = useState([]);
   const [generating, setGenerating] = useState(false);
@@ -103,6 +109,36 @@ export default function Dashboard() {
     [visibleContests, activeStatus]
   );
 
+  /**
+   * Type filter, mirroring the mobile app: multi-select, empty = everything,
+   * options derived from the contests actually in this tab so the filter never
+   * offers a choice that yields nothing. Selections that the next tab doesn't
+   * contain are dropped rather than silently filtering everything away.
+   */
+  const typeOptions = useMemo(() => {
+    const counts = filteredContests.reduce((acc, c) => {
+      const key = c.contestType || "other";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([type, count]) => ({ type, count }));
+  }, [filteredContests]);
+
+  const effectiveTypes = useMemo(
+    () => selectedTypes.filter((t) => typeOptions.some((o) => o.type === t)),
+    [selectedTypes, typeOptions]
+  );
+
+  const shownContests = useMemo(
+    () =>
+      effectiveTypes.length === 0
+        ? filteredContests
+        : filteredContests.filter((c) => effectiveTypes.includes(c.contestType || "other")),
+    [filteredContests, effectiveTypes]
+  );
+
   const statusCounts = useMemo(
     () =>
       statusTabs.reduce((counts, tab) => {
@@ -119,10 +155,10 @@ export default function Dashboard() {
   const atLimit = !isPro && trackedCount >= FREE_TRACKING_LIMIT;
 
   const selected = selectedId
-    ? filteredContests.find((contest) => contest.id === selectedId) ?? null
+    ? shownContests.find((contest) => contest.id === selectedId) ?? null
     : isMobile
       ? null
-      : filteredContests[0] ?? null;
+      : shownContests[0] ?? null;
 
   // What this contest asks the entrant to produce drives the whole tool panel:
   // a video giveaway gets concepts, a buy&win gets a checklist.
@@ -322,9 +358,19 @@ export default function Dashboard() {
             ))}
           </div>
 
+          {typeOptions.length > 1 && (
+            <TypeFilter
+              options={typeOptions}
+              selected={effectiveTypes}
+              onChange={setSelectedTypes}
+              open={typeFilterOpen}
+              setOpen={setTypeFilterOpen}
+            />
+          )}
+
           <div className="cards">
-            {filteredContests.length > 0 ? (
-              filteredContests.map((contest) => (
+            {shownContests.length > 0 ? (
+              shownContests.map((contest) => (
                 <ContestCard
                   key={contest.id}
                   contest={contest}
@@ -342,7 +388,16 @@ export default function Dashboard() {
             ) : (
               <div className="empty-state">
                 <Circle size={22} />
-                <p>No contests here yet.</p>
+                <p>
+                  {effectiveTypes.length === 0
+                    ? "No contests here yet."
+                    : "Nothing matches those types."}
+                </p>
+                {effectiveTypes.length > 0 && (
+                  <button className="quiet-link" onClick={() => setSelectedTypes([])}>
+                    Clear filter
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -551,6 +606,73 @@ export default function Dashboard() {
         )}
       </main>
     </>
+  );
+}
+
+function TypeFilter({ options, selected, onChange, open, setOpen }) {
+  const formatType = (type) => type.replaceAll("&", " & ");
+
+  const label =
+    selected.length === 0
+      ? "All types"
+      : selected.length === 1
+        ? formatType(selected[0])
+        : `${selected.length} types`;
+
+  const toggle = (type) =>
+    onChange(selected.includes(type) ? selected.filter((t) => t !== type) : [...selected, type]);
+
+  return (
+    <div className="type-filter">
+      <button
+        className={selected.length > 0 ? "type-filter-btn active" : "type-filter-btn"}
+        onClick={() => setOpen(!open)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <ListFilter size={14} />
+        <span>{label}</span>
+        <ChevronDown size={15} />
+      </button>
+      {selected.length > 0 && (
+        <button className="type-filter-clear" onClick={() => onChange([])}>
+          Clear
+        </button>
+      )}
+
+      {open && (
+        <>
+          <div className="type-filter-backdrop" onClick={() => setOpen(false)} />
+          <div className="type-filter-menu" role="listbox" aria-label="Filter by type">
+            <div className="type-filter-head">
+              <span>Filter by type</span>
+              {selected.length > 0 && (
+                <button onClick={() => onChange([])}>Reset</button>
+              )}
+            </div>
+            {options.map(({ type, count }) => {
+              const isSelected = selected.includes(type);
+              return (
+                <button
+                  key={type}
+                  className={isSelected ? "type-filter-option selected" : "type-filter-option"}
+                  onClick={() => toggle(type)}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  {isSelected ? <CheckSquare2 size={17} /> : <Square size={17} />}
+                  <span>{formatType(type)}</span>
+                  <em>{count}</em>
+                </button>
+              );
+            })}
+            <button className="type-filter-done" onClick={() => setOpen(false)}>
+              Done
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

@@ -1951,3 +1951,25 @@ textarea:focus {
   .landing-hero-grid { grid-template-columns: 1fr; gap: 32px; }
   .landing-hero { padding-bottom: 48px; }
 }
+
+/* ============ Type filter (Dashboard) ============ */
+.type-filter { position: relative; display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; }
+.type-filter-btn { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid #d8d2c5; border-radius: 9px; padding: 7px 12px; font-size: 13px; font-weight: 600; color: #173f46; cursor: pointer; }
+.type-filter-btn:hover { border-color: #173f46; }
+.type-filter-btn.active { border-color: #173f46; background: #e4f0ec; }
+.type-filter-btn span { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.type-filter-clear { font-size: 12.5px; font-weight: 700; color: #b3541e; background: none; border: 0; cursor: pointer; padding: 4px; }
+.type-filter-backdrop { position: fixed; inset: 0; background: rgba(23, 63, 70, 0.28); z-index: 40; }
+.type-filter-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 41; min-width: 250px; background: #fdfaf2; border: 1px solid #e0dacb; border-radius: 12px; box-shadow: 0 18px 44px rgba(23, 63, 70, 0.18); padding: 12px; }
+.type-filter-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 10px; border-bottom: 1px solid #eee9df; margin-bottom: 6px; }
+.type-filter-head span { font-size: 12.5px; font-weight: 800; color: #173f46; text-transform: uppercase; letter-spacing: 0.8px; }
+.type-filter-head button { font-size: 12.5px; font-weight: 700; color: #b3541e; background: none; border: 0; cursor: pointer; padding: 2px; }
+.type-filter-option { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; border-bottom: 1px solid #f1ece1; padding: 10px 4px; cursor: pointer; font-size: 14px; color: #1f2528; text-align: left; }
+.type-filter-option:last-of-type { border-bottom: 0; }
+.type-filter-option svg { color: #b9b2a3; flex-shrink: 0; }
+.type-filter-option.selected { color: #173f46; font-weight: 700; }
+.type-filter-option.selected svg { color: #173f46; }
+.type-filter-option span { flex: 1; }
+.type-filter-option em { font-style: normal; font-size: 12px; color: #8a8578; font-weight: 600; }
+.type-filter-done { margin-top: 10px; width: 100%; background: #173f46; color: #fff; border: 0; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.type-filter-done:hover { background: #1d525c; }
