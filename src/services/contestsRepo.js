@@ -10,7 +10,7 @@ import { toUiContest } from "./contestMapper.js";
 
 const CONTEST_COLUMNS =
   "id, post_url, brand, username, profile_url, caption, prize, prompt, conditions, " +
-  "contest_type, note, deadline, posted_at, likes, comments, raw_status, source, scraped_at";
+  "contest_type, note, deadline, posted_at, likes, comments, raw_status, source, scraped_at, image_url";
 
 /** The trigger in 001 raises this prefix when a free account is at its cap. */
 export const FREE_LIMIT_MARKER = "FREE_PLAN_LIMIT";
