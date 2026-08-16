@@ -17,7 +17,8 @@ import {
   Sparkles,
   Trash2,
   Trophy,
-  Wand2
+  Wand2,
+  X
 } from "lucide-react";
 import AppNav from "../components/AppNav.jsx";
 import { useAuth } from "../auth/AuthProvider.jsx";
@@ -62,6 +63,18 @@ export default function Dashboard() {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState("");
 
+  // Desktop shows list + workspace side by side and auto-selects the first
+  // contest; mobile shows the list first and opens the workspace as a sheet
+  // only when the user taps a card.
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 760px)").matches);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 760px)");
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   // Seed the workspace controls from the user's saved defaults once loaded.
   useEffect(() => {
     if (!profile) return;
@@ -105,8 +118,11 @@ export default function Dashboard() {
   );
   const atLimit = !isPro && trackedCount >= FREE_TRACKING_LIMIT;
 
-  const selected =
-    filteredContests.find((contest) => contest.id === selectedId) ?? filteredContests[0];
+  const selected = selectedId
+    ? filteredContests.find((contest) => contest.id === selectedId) ?? null
+    : isMobile
+      ? null
+      : filteredContests[0] ?? null;
 
   // What this contest asks the entrant to produce drives the whole tool panel:
   // a video giveaway gets concepts, a buy&win gets a checklist.
@@ -334,6 +350,13 @@ export default function Dashboard() {
 
         {selected ? (
           <section className="workspace" aria-label="Contest workspace">
+            <button
+              className="workspace-close"
+              onClick={() => setSelectedId(null)}
+              aria-label="Close contest"
+            >
+              <X size={20} />
+            </button>
             <div className="detail-band">
               <div
                 className="contest-art"
@@ -517,7 +540,7 @@ export default function Dashboard() {
               </div>
             </section>
           </section>
-        ) : (
+        ) : isMobile ? null : (
           <section className="workspace empty-workspace" aria-label="Contest workspace">
             <div className="empty-workspace-panel">
               <Trophy size={32} />

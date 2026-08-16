@@ -1,11 +1,14 @@
 import React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
+  Home as HomeIcon,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Settings as SettingsIcon,
   Sparkles,
   Trophy,
+  User,
   UserCog
 } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider.jsx";
@@ -66,6 +69,23 @@ export default function AppNav() {
           <LogOut size={16} />
         </button>
       </div>
+
+      {/* Mobile bottom tabs — mirrors the native app's Tab.Navigator.
+          Hidden on desktop, fixed to the bottom edge on small screens. */}
+      <nav className="mobile-tabbar" aria-label="Main">
+        <NavLink to="/home" end className={({ isActive }) => (isActive ? "mobile-tab active" : "mobile-tab")}>
+          <HomeIcon size={22} strokeWidth={2.2} />
+          <span>Home</span>
+        </NavLink>
+        <NavLink to="/app" className={({ isActive }) => (isActive ? "mobile-tab active" : "mobile-tab")}>
+          <LayoutGrid size={22} strokeWidth={2.2} />
+          <span>Contests</span>
+        </NavLink>
+        <NavLink to="/settings" className={({ isActive }) => (isActive ? "mobile-tab active" : "mobile-tab")}>
+          <User size={22} strokeWidth={2.2} />
+          <span>Profile</span>
+        </NavLink>
+      </nav>
     </header>
   );
 }

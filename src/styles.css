@@ -1646,3 +1646,229 @@ textarea:focus {
     justify-content: flex-start;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Mobile: iOS native app parity.
+   Bottom tabs, pill status tabs, native card look, full-screen detail sheet.
+   Mirrors contest-hunter-mobile (theme.js tokens + screens).
+   --------------------------------------------------------------------------- */
+
+/* Hidden by default; only the mobile breakpoint below turns it on. */
+.mobile-tabbar {
+  display: none;
+}
+
+/* Close button for the mobile detail sheet; desktop never needs it. */
+.workspace-close {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  /* Top bar becomes a compact brand bar — tabs own navigation now. */
+  .app-nav {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .app-nav-links,
+  .app-nav-account {
+    display: none;
+  }
+
+  /* Bottom tab bar — native Tab.Navigator: white, top hairline, 11px labels,
+     active ink (#173f46) / inactive faint (#8b9386). */
+  .mobile-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: #ffffff;
+    border-top: 1px solid #efe9dd;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -4px 14px rgba(23, 63, 70, 0.06);
+  }
+  .mobile-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 7px 0 5px;
+    color: #8b9386;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .mobile-tab.active {
+    color: #173f46;
+  }
+
+  /* Content clears the fixed tabs (~58px bar + home indicator). */
+  .app-shell,
+  .settings-shell {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+  html {
+    scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  /* Screens sit on the native bg; tighter 16px gutters. */
+  .contest-list {
+    border-right: 0;
+    background: #f6f4ef;
+  }
+  .contest-list,
+  .workspace {
+    padding: 16px;
+  }
+
+  /* Page header → native ScreenHeader (26/800 ink). */
+  .section-header h2 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #173f46;
+  }
+  .section-header .eyebrow {
+    color: #7a837a;
+    opacity: 1;
+    font-size: 12.5px;
+  }
+
+  /* Status tabs → native segmented pills. */
+  .status-tabs {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .status-tab {
+    justify-content: center;
+    padding: 9px 6px;
+    border-radius: 10px;
+    border-color: #e9e1d3;
+    background: #ffffff;
+    color: #5a615c;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .status-tab strong {
+    min-width: 22px;
+    padding: 1px 6px;
+    font-size: 11px;
+  }
+  .status-tab.active {
+    border-color: #173f46;
+    background: #173f46;
+    color: #ffffff;
+  }
+  .status-tab.active strong {
+    background: #f0b84d;
+    color: #172326;
+  }
+
+  /* Cards → native ContestCard: 96px poster, 14px radius, soft hairline. */
+  .cards {
+    gap: 10px;
+  }
+  .contest-card {
+    grid-template-columns: 96px 1fr;
+    min-height: 0;
+    border-radius: 14px;
+    border-color: #efe9dd;
+  }
+  .contest-card.active {
+    box-shadow: 0 0 0 2px rgba(23, 63, 70, 0.13);
+  }
+  .card-content {
+    padding: 12px 13px;
+  }
+  .card-title h3 {
+    font-size: 15px;
+  }
+  .contest-card p {
+    margin: 5px 0 8px;
+    font-size: 13px;
+  }
+  .save-button {
+    top: 8px;
+    right: 8px;
+  }
+
+  /* Workspace opens as a full-screen sheet over everything (native modal). */
+  .workspace:not(.empty-workspace) {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #f6f4ef;
+    padding: 16px 16px 96px;
+    animation: sheet-up 0.22s ease-out;
+  }
+  .workspace-close {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin: 0 0 12px auto;
+    border: 1px solid #e9e1d3;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #173f46;
+    cursor: pointer;
+  }
+
+  .detail-band {
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .contest-art {
+    min-height: 200px;
+    border-radius: 14px;
+  }
+  .detail-main h2 {
+    font-size: 24px;
+  }
+  .quick-facts span {
+    background: #ffffff;
+    border: 1px solid #efe9dd;
+  }
+
+  /* Panels → native 14px radius + soft border. */
+  .tool-panel,
+  .conditions-band,
+  .status-action-band {
+    border-radius: 14px;
+    border-color: #efe9dd;
+  }
+  .conditions-band {
+    padding: 16px;
+  }
+  .status-action-band {
+    display: block;
+  }
+  .status-actions {
+    margin: 12px 0 0;
+  }
+
+  /* Home tab aligns with the native 16px body gutter. */
+  .home-shell {
+    padding: 16px;
+    gap: 18px;
+  }
+  .stat-row {
+    gap: 10px;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
