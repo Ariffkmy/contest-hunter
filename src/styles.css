@@ -1871,6 +1871,8 @@ textarea:focus {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
 /* ============ Landing page ============ */
 .landing { min-height: 100vh; background: #f6f4ef; color: #1f2528; }
 .landing-hero { background: linear-gradient(160deg, #173f46 0%, #1d525c 55%, #245f68 100%); color: #fdfaf2; padding: 20px 0 64px; }
