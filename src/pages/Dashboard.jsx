@@ -67,6 +67,7 @@ export default function Dashboard() {
   const [ideas, setIdeas] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState("");
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   // Desktop shows list + workspace side by side and auto-selects the first
   // contest; mobile shows the list first and opens the workspace as a sheet
@@ -430,7 +431,7 @@ export default function Dashboard() {
               <X size={20} />
             </button>
             <div className="detail-band">
-                          <div className="contest-art">
+                          <div className="contest-art" onClick={() => selected.imageUrl && setLightboxImage(selected.imageUrl)} style={{ cursor: selected.imageUrl ? 'pointer' : 'default' }}>
                             {selected.imageUrl ? (
                               <img src={selected.imageUrl} alt={selected.brand} className="contest-image" />
                             ) : (
@@ -616,16 +617,27 @@ export default function Dashboard() {
               <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
               <h2>No {activeTab === "new_today" ? "new" : activeTab === "selected" ? "selected" : ""} contests</h2>
                             <p>{activeTab === "new_today" ? "No new contests have been added in the last 24 hours." : activeTab === "selected" ? "Select contests from the All Contests tab to track them here." : "No contests available right now."}</p>
-            </div>
-          </section>
-        )}
-      </main>
-    </>
-  );
-}
+                          </div>
+                        </section>
+                      )}
+                    </main>
+
+                    {/* Lightbox for full-size poster */}
+                    {lightboxImage && (
+                      <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
+                        <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+                          <img src={lightboxImage} alt="Full-size poster" className="lightbox-image" />
+                          <button className="lightbox-close" onClick={() => setLightboxImage(null)}>
+                            <X size={24} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              }
 
 function TypeFilter({ options, selected, onChange, open, setOpen }) {
-  const formatType = (type) => type.replaceAll("&", " & ");
 
   const label =
     selected.length === 0
