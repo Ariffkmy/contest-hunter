@@ -1682,8 +1682,12 @@ textarea:focus {
   display: none;
 }
 
-/* Close button for the mobile detail sheet; desktop never needs it. */
+/* Close button + backdrop for the mobile detail sheet; desktop never needs them. */
 .workspace-close {
+  display: none;
+}
+
+.workspace-backdrop {
   display: none;
 }
 
@@ -1760,15 +1764,29 @@ textarea:focus {
     font-size: 12.5px;
   }
 
-  /* Status tabs → native segmented pills. */
+  /* Status tabs → native segmented pills on one horizontally scrollable line. */
   .status-tabs {
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     gap: 8px;
     margin-bottom: 16px;
+    /* Let pills bleed to the screen edges while scrolling. */
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 0 16px;
+  }
+  .status-tabs::-webkit-scrollbar {
+    display: none;
   }
   .status-tab {
+    flex: 0 0 auto;
+    width: auto;
     justify-content: center;
-    padding: 9px 6px;
+    white-space: nowrap;
+    padding: 9px 12px;
     border-radius: 10px;
     border-color: #e9e1d3;
     background: #ffffff;
@@ -1819,28 +1837,50 @@ textarea:focus {
     right: 8px;
   }
 
-  /* Workspace opens as a full-screen sheet over everything (native modal). */
-  .workspace:not(.empty-workspace) {
+  /* Workspace opens as a bottom sheet that slides up over the list. */
+  .workspace-backdrop {
+    display: block;
     position: fixed;
     inset: 0;
+    z-index: 65;
+    background: rgba(23, 35, 38, 0.42);
+    animation: sheet-backdrop-in 0.22s ease-out;
+  }
+  .workspace:not(.empty-workspace) {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 70;
+    max-height: 85vh;
     overflow-y: auto;
     overscroll-behavior: contain;
     background: #f6f4ef;
-    padding: 16px 16px 96px;
-    animation: sheet-up 0.22s ease-out;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -10px 30px rgba(23, 63, 70, 0.18);
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+    animation: sheet-slide-up 0.26s ease-out;
   }
   .workspace-close {
     display: grid;
     place-items: center;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
     width: 38px;
     height: 38px;
-    margin: 10px 0 12px auto;
+    margin: 0;
     border: 1px solid #e9e1d3;
     border-radius: 999px;
     background: #ffffff;
     color: #173f46;
     cursor: pointer;
+  }
+  /* Clear the absolutely positioned close button. */
+  .workspace:not(.empty-workspace) .detail-band {
+    margin-top: 40px;
   }
 
   .detail-band {
@@ -1893,6 +1933,24 @@ textarea:focus {
   }
   to {
     transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheet-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
     opacity: 1;
   }
 }

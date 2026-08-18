@@ -433,6 +433,14 @@ export default function Dashboard() {
         </section>
 
         {selected ? (
+          <>
+            {isMobile && (
+              <div
+                className="workspace-backdrop"
+                onClick={() => setSelectedId(null)}
+                aria-hidden="true"
+              />
+            )}
           <section className="workspace" aria-label="Contest workspace">
             <button
               className="workspace-close"
@@ -626,6 +634,7 @@ export default function Dashboard() {
               </div>
             </section>
           </section>
+          </>
         ) : isMobile ? null : (
           <section className="workspace empty-workspace" aria-label="Contest workspace">
             <div className="empty-workspace-panel">
