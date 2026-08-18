@@ -48,10 +48,8 @@ export function toUiContest(row, index = 0, tracking = null) {
     status: tracking?.status ?? statusFromRaw(row.raw_status),
     tracked: Boolean(tracking),
     rawStatus: row.raw_status,
-    // Set nightly from the deadline, not by the scraper. The dashboard query
-    // already filters these out; carried through so an admin view that reads the
-    // full catalogue can tell live rows from closed ones.
-    isExpired: row.is_expired ?? false,
+    // Set nightly from the deadline, not by the scraper.
+        isExpired: false,
     brand: row.brand,
     handle: `@${row.username}`,
     username: row.username,
