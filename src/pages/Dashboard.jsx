@@ -15,7 +15,6 @@ import {
   ListFilter,
   Lock,
   MessageSquareQuote,
-  Play,
   Share2,
   Sparkles,
   Square,
@@ -42,14 +41,20 @@ import { formatCopy, requiresCommentAnswer } from "../services/contestFormats.js
 const contestTabs = [
   { id: "new_today", label: "Newly Added Today", description: "Added in the last 24 hours" },
   { id: "all", label: "All Contests", description: "The full contest repository" },
-  { id: "selected", label: "Your Selected", description: "Contests you have selected to track" }
+  { id: "tracked", label: "Your Selected", description: "Contests you are tracking right now" },
+  { id: "historical", label: "Historical", description: "Contests you have marked completed" }
 ];
 
+// Only two states matter now: a contest you're tracking, and one you've
+// finished. Anything untracked is simply not on your board yet.
 const statusLabels = {
-  upcoming: "Not started",
-  in_progress: "In progress",
+  upcoming: "Tracking",
+  in_progress: "Tracking",
   completed: "Completed"
 };
+
+const describeStatus = (contest) =>
+  contest.tracked ? statusLabels[contest.status] ?? "Tracking" : "Not selected";
 
 export default function Dashboard() {
   const { user, profile, isPro, plan } = useAuth();
@@ -113,8 +118,10 @@ export default function Dashboard() {
             const t = c.scraped_at ? new Date(c.scraped_at).getTime() : 0;
             return t >= dayAgo;
           });
-        case "selected":
-          return visibleContests.filter((c) => c.tracked);
+        case "tracked":
+          return visibleContests.filter((c) => c.tracked && c.status !== "completed");
+        case "historical":
+          return visibleContests.filter((c) => c.tracked && c.status === "completed");
         default:
           return visibleContests;
       }
@@ -160,7 +167,8 @@ export default function Dashboard() {
             return t >= dayAgo;
           }).length,
           all: visibleContests.length,
-          selected: visibleContests.filter((c) => c.tracked).length,
+          tracked: visibleContests.filter((c) => c.tracked && c.status !== "completed").length,
+          historical: visibleContests.filter((c) => c.tracked && c.status === "completed").length,
         };
       },
       [visibleContests]
@@ -225,16 +233,20 @@ export default function Dashboard() {
     const target = contests.find((contest) => contest.id === id);
     if (!target) return;
     const before = { status: target.status, tracked: target.tracked };
+    const beforeTab = activeTab;
 
     applyLocal(id, { status, tracked: true });
-    setActiveTab(status);
+    // Follow the contest into whichever of the two tracked tabs now holds it.
+    if (activeTab === "tracked" || activeTab === "historical") {
+      setActiveTab(status === "completed" ? "historical" : "tracked");
+    }
     setSelectedId(id);
 
     const { error } = await setContestStatus(user.id, id, status);
     if (error) {
       handleWriteError(error, () => {
         applyLocal(id, before);
-        setActiveStatus(before.status);
+        setActiveTab(beforeTab);
       });
       return;
     }
@@ -396,20 +408,19 @@ export default function Dashboard() {
                   onSelect={() => setSelectedId(contest.id)}
                   onSave={() => toggleSaved(contest.id)}
                   onDelete={() => hideContest(contest)}
-                  onStart={
-                    contest.status === "upcoming"
-                      ? () => moveContestToStatus(contest.id, "in_progress")
-                      : null
-                  }
                 />
               ))
             ) : (
               <div className="empty-state">
                 <Circle size={22} />
                 <p>
-                  {effectiveTypes.length === 0
-                    ? "No contests here yet."
-                    : "Nothing matches those types."}
+                  {effectiveTypes.length > 0
+                    ? "Nothing matches those types."
+                    : activeTab === "historical"
+                      ? "Nothing completed yet — contests you mark completed land here."
+                      : activeTab === "tracked"
+                        ? "No contests selected yet. Pick some from All Contests."
+                        : "No contests here yet."}
                 </p>
                 {effectiveTypes.length > 0 && (
                   <button className="quiet-link" onClick={() => setSelectedTypes([])}>
@@ -580,10 +591,15 @@ export default function Dashboard() {
             <section className="status-action-band">
               <div>
                 <p className="eyebrow">Contest status</p>
-                <h3>{statusLabels[selected.status]}</h3>
+                <h3>{describeStatus(selected)}</h3>
               </div>
               <div className="status-actions">
-                {selected.status !== "completed" ? (
+                {!selected.tracked ? (
+                  <button className="complete-button" onClick={() => toggleSaved(selected.id)}>
+                    <Heart size={16} />
+                    Select contest
+                  </button>
+                ) : selected.status !== "completed" ? (
                   <button
                     className="complete-button"
                     onClick={() => moveSelectedToStatus("completed")}
@@ -592,21 +608,10 @@ export default function Dashboard() {
                     Mark completed
                   </button>
                 ) : (
-                  <button
-                    className="complete-button"
-                    onClick={() => moveSelectedToStatus("in_progress")}
-                  >
-                    <ChevronRight size={16} />
-                    Move to progress
-                  </button>
-                )}
-                {selected.status === "upcoming" && (
-                  <button
-                    className="secondary-button"
-                    onClick={() => moveSelectedToStatus("in_progress")}
-                  >
-                    Start now
-                  </button>
+                  <span className="status-chip">
+                    <Check size={14} />
+                    Completed
+                  </span>
                 )}
               </div>
             </section>
@@ -615,8 +620,26 @@ export default function Dashboard() {
           <section className="workspace empty-workspace" aria-label="Contest workspace">
             <div className="empty-workspace-panel">
               <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
-              <h2>No {activeTab === "new_today" ? "new" : activeTab === "selected" ? "selected" : ""} contests</h2>
-                            <p>{activeTab === "new_today" ? "No new contests have been added in the last 24 hours." : activeTab === "selected" ? "Select contests from the All Contests tab to track them here." : "No contests available right now."}</p>
+              <h2>
+                No{" "}
+                {activeTab === "new_today"
+                  ? "new"
+                  : activeTab === "tracked"
+                    ? "selected"
+                    : activeTab === "historical"
+                      ? "completed"
+                      : ""}{" "}
+                contests
+              </h2>
+                            <p>
+                              {activeTab === "new_today"
+                                ? "No new contests have been added in the last 24 hours."
+                                : activeTab === "tracked"
+                                  ? "Select contests from the All Contests tab to track them here."
+                                  : activeTab === "historical"
+                                    ? "Contests you mark as completed will be kept here."
+                                    : "No contests available right now."}
+                            </p>
                           </div>
                         </section>
                       )}
@@ -703,7 +726,7 @@ function TypeFilter({ options, selected, onChange, open, setOpen }) {
   );
 }
 
-function ContestCard({ contest, active, onSelect, onSave, onDelete, onStart }) {
+function ContestCard({ contest, active, onSelect, onSave, onDelete }) {
   const deadline = describeDeadline(contest.deadline);
   return (
     <article className={active ? "contest-card active" : "contest-card"} onClick={onSelect}>
@@ -742,25 +765,13 @@ function ContestCard({ contest, active, onSelect, onSave, onDelete, onStart }) {
         <p>{contest.prize}</p>
         <div className="status-chip">
           <Circle size={10} fill="currentColor" />
-          {statusLabels[contest.status]}
+          {describeStatus(contest)}
           {contest.tracked && <span className="tracked-dot" title="Tracking" />}
         </div>
         <p className={`deadline-line ${deadline.urgency}`}>{deadline.label}</p>
         <p className="engagement-line">
           {contest.engagement.likes} likes · {contest.engagement.comments} comments
         </p>
-        {onStart && (
-          <button
-            className="start-button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onStart();
-            }}
-          >
-            <Play size={13} />
-            Move to In progress
-          </button>
-        )}
       </div>
     </article>
   );
