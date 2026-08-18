@@ -15,6 +15,25 @@
   .logo-img-sm { height: 18px; width: auto; display: block; }
   .logo-img-lg { height: 32px; width: auto; display: block; }
 
+/* Contest image styling */
+.contest-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #f0ede8;
+}
+.thumb-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.thumb-gradient {
+  width: 100%;
+  height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;

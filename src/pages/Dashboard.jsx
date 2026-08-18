@@ -39,10 +39,10 @@ import { describeDeadline, formatTimestamp } from "../services/deadlines.js";
 import { can, FEATURES, FREE_TRACKING_LIMIT } from "../services/entitlements.js";
 import { formatCopy, requiresCommentAnswer } from "../services/contestFormats.js";
 
-const statusTabs = [
-  { id: "upcoming", label: "Upcoming", description: "Not started yet" },
-  { id: "in_progress", label: "In progress", description: "Open for entries" },
-  { id: "completed", label: "Completed", description: "Marked as done" }
+const contestTabs = [
+  { id: "new_today", label: "Newly Added Today", description: "Added in the last 24 hours" },
+  { id: "all", label: "All Contests", description: "The full contest repository" },
+  { id: "selected", label: "Your Selected", description: "Contests you have selected to track" }
 ];
 
 const statusLabels = {
@@ -60,7 +60,7 @@ export default function Dashboard() {
   const [dataError, setDataError] = useState(null);
   const [limitHit, setLimitHit] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-  const [activeStatus, setActiveStatus] = useState("in_progress");
+    const [activeTab, setActiveTab] = useState("new_today");
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [typeFilterOpen, setTypeFilterOpen] = useState(false);
   const [personalNote, setPersonalNote] = useState("");
@@ -103,10 +103,21 @@ export default function Dashboard() {
     [contests, hidden]
   );
 
-  const filteredContests = useMemo(
-    () => visibleContests.filter((contest) => contest.status === activeStatus),
-    [visibleContests, activeStatus]
-  );
+  const filteredContests = useMemo(() => {
+      const now = Date.now();
+      const dayAgo = now - 24 * 60 * 60 * 1000;
+      switch (activeTab) {
+        case "new_today":
+          return visibleContests.filter((c) => {
+            const t = c.scraped_at ? new Date(c.scraped_at).getTime() : 0;
+            return t >= dayAgo;
+          });
+        case "selected":
+          return visibleContests.filter((c) => c.tracked);
+        default:
+          return visibleContests;
+      }
+    }, [visibleContests, activeTab]);
 
   /**
    * Type filter, mirroring the mobile app: multi-select, empty = everything,
@@ -139,13 +150,20 @@ export default function Dashboard() {
   );
 
   const statusCounts = useMemo(
-    () =>
-      statusTabs.reduce((counts, tab) => {
-        counts[tab.id] = visibleContests.filter((contest) => contest.status === tab.id).length;
-        return counts;
-      }, {}),
-    [visibleContests]
-  );
+      () => {
+        const now = Date.now();
+        const dayAgo = now - 24 * 60 * 60 * 1000;
+        return {
+          new_today: visibleContests.filter((c) => {
+            const t = c.scraped_at ? new Date(c.scraped_at).getTime() : 0;
+            return t >= dayAgo;
+          }).length,
+          all: visibleContests.length,
+          selected: visibleContests.filter((c) => c.tracked).length,
+        };
+      },
+      [visibleContests]
+    );
 
   const trackedCount = useMemo(
     () => visibleContests.filter((contest) => contest.tracked).length,
@@ -208,7 +226,7 @@ export default function Dashboard() {
     const before = { status: target.status, tracked: target.tracked };
 
     applyLocal(id, { status, tracked: true });
-    setActiveStatus(status);
+    setActiveTab(status);
     setSelectedId(id);
 
     const { error } = await setContestStatus(user.id, id, status);
@@ -342,19 +360,19 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="status-tabs" role="tablist" aria-label="Contest status">
-            {statusTabs.map((tab) => (
-              <button
-                key={tab.id}
-                className={activeStatus === tab.id ? "status-tab active" : "status-tab"}
-                onClick={() => setActiveStatus(tab.id)}
-                role="tab"
-                aria-selected={activeStatus === tab.id}
-              >
-                <span>{tab.label}</span>
-                <strong>{statusCounts[tab.id] ?? 0}</strong>
-              </button>
-            ))}
+          <div className="status-tabs" role="tablist" aria-label="Contest tabs">
+                      {contestTabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          className={activeTab === tab.id ? "status-tab active" : "status-tab"}
+                          onClick={() => setActiveTab(tab.id)}
+                          role="tab"
+                          aria-selected={activeTab === tab.id}
+                        >
+                          <span>{tab.label}</span>
+                          <strong>{statusCounts[tab.id] ?? 0}</strong>
+                        </button>
+                      ))}
           </div>
 
           {typeOptions.length > 1 && (
@@ -412,16 +430,14 @@ export default function Dashboard() {
               <X size={20} />
             </button>
             <div className="detail-band">
-              <div
-                className="contest-art"
-                style={{
-                  backgroundImage: selected.imageUrl ? `url(${selected.imageUrl})` : selected.art,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center"
-                }}
-              >
-                <span>{selected.source}</span>
-              </div>
+                          <div className="contest-art">
+                            {selected.imageUrl ? (
+                              <img src={selected.imageUrl} alt={selected.brand} className="contest-image" />
+                            ) : (
+                              <div className="thumb-gradient" style={{ background: selected.art }} />
+                            )}
+                            <span>{selected.source}</span>
+                          </div>
               <div className="detail-main">
                 <div className="detail-title-row">
                   <div>
@@ -598,8 +614,8 @@ export default function Dashboard() {
           <section className="workspace empty-workspace" aria-label="Contest workspace">
             <div className="empty-workspace-panel">
               <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
-              <h2>No {statusTabs.find((tab) => tab.id === activeStatus)?.label.toLowerCase()} contests</h2>
-              <p>When a contest moves into this stage, it will show up here.</p>
+              <h2>No {activeTab === "new_today" ? "new" : activeTab === "selected" ? "selected" : ""} contests</h2>
+                            <p>{activeTab === "new_today" ? "No new contests have been added in the last 24 hours." : activeTab === "selected" ? "Select contests from the All Contests tab to track them here." : "No contests available right now."}</p>
             </div>
           </section>
         )}
@@ -679,15 +695,13 @@ function ContestCard({ contest, active, onSelect, onSave, onDelete, onStart }) {
   const deadline = describeDeadline(contest.deadline);
   return (
     <article className={active ? "contest-card active" : "contest-card"} onClick={onSelect}>
-      <div
-        className="thumb"
-        style={{
-          backgroundImage: contest.imageUrl ? `url(${contest.imageUrl})` : contest.art,
-          backgroundSize: "cover",
-          backgroundPosition: "center"
-        }}
-      >
-        <button
+      <div className="thumb">
+              {contest.imageUrl ? (
+                <img src={contest.imageUrl} alt={contest.brand} className="thumb-image" />
+              ) : (
+                <div className="thumb-gradient" style={{ background: contest.art }} />
+              )}
+              <button
           className={contest.saved ? "save-button saved" : "save-button"}
           onClick={(event) => {
             event.stopPropagation();

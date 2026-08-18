@@ -64,6 +64,7 @@ export function toUiContest(row, index = 0, tracking = null) {
     effort: formatEffort({ contestType: row.contest_type, conditions: row.conditions }),
     source: row.note || row.contest_type || "Instagram giveaway",
     imageUrl: row.image_url ?? null,
+    scrapedAt: row.scraped_at ?? null,
     instagramUrl: row.post_url,
     saved: tracking?.saved ?? false,
     conditions: row.conditions ?? [],
