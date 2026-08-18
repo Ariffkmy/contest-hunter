@@ -7,7 +7,6 @@ import {
   LogOut,
   Settings as SettingsIcon,
   Sparkles,
-  Trophy,
   User,
   UserCog
 } from "lucide-react";
@@ -26,7 +25,7 @@ export default function AppNav() {
     <header className="app-nav">
       <Link className="app-nav-brand" to="/app">
         <div className="logo-mark">
-          <Trophy size={18} />
+          <img src="/logo.png" alt="Contest Hunter" className="logo-img-sm" />
         </div>
         <span>Contest Hunter</span>
       </Link>

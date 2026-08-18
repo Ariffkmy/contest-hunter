@@ -20,7 +20,7 @@ function FullPageMessage({ title, children }) {
   return (
     <main className="auth-shell">
       <section className="auth-card auth-card-centered">
-        <Trophy size={28} />
+        <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
         <h2>{title}</h2>
         {children}
       </section>

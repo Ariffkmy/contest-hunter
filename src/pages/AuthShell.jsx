@@ -1,5 +1,4 @@
 import React from "react";
-import { Trophy } from "lucide-react";
 
 /** Shared frame for every signed-out page. */
 export function AuthShell({ title, subtitle, children, footer }) {
@@ -8,7 +7,7 @@ export function AuthShell({ title, subtitle, children, footer }) {
       <section className="auth-card">
         <div className="brand-row">
           <div className="logo-mark">
-            <Trophy size={20} />
+            <img src="/logo.png" alt="Contest Hunter" className="logo-img" />
           </div>
           <div>
             <h1>Contest Hunter</h1>

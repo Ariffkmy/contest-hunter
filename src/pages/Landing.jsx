@@ -13,7 +13,6 @@ import {
   PenLine,
   Sparkles,
   Target,
-  Trophy,
   Wand2,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider.jsx";
@@ -33,7 +32,7 @@ export default function Landing() {
         <section className="landing-hero">
           <div className="landing-hero-inner">
             <div className="logo-mark landing-logo">
-              <Trophy size={22} />
+              <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
             </div>
             <h1>Welcome back to Contest Hunter</h1>
             <p className="landing-sub">Your board is waiting — jump back in.</p>
@@ -54,7 +53,7 @@ export default function Landing() {
           <div className="landing-nav">
             <div className="brand-row landing-brand">
               <div className="logo-mark">
-                <Trophy size={20} />
+                <img src="/logo.png" alt="Contest Hunter" className="logo-img" />
               </div>
               <div>
                 <h1>Contest Hunter</h1>
@@ -246,7 +245,7 @@ export default function Landing() {
         <div className="landing-footer-inner">
           <div className="brand-row landing-brand">
             <div className="logo-mark">
-              <Trophy size={18} />
+              <img src="/logo.png" alt="Contest Hunter" className="logo-img-sm" />
             </div>
             <span>Contest Hunter</span>
           </div>

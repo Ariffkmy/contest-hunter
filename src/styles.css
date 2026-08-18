@@ -8,7 +8,12 @@
 
 * {
   box-sizing: border-box;
-}
+  }
+
+  /* Logo image sizing */
+  .logo-img { height: 28px; width: auto; display: block; }
+  .logo-img-sm { height: 18px; width: auto; display: block; }
+  .logo-img-lg { height: 32px; width: auto; display: block; }
 
 body {
   margin: 0;

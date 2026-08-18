@@ -20,8 +20,7 @@ import {
   Sparkles,
   Square,
   Trash2,
-  Trophy,
-  Wand2,
+    Wand2,
   X
 } from "lucide-react";
 import AppNav from "../components/AppNav.jsx";
@@ -299,7 +298,7 @@ export default function Dashboard() {
         <main className="app-shell">
           <section className="workspace empty-workspace">
             <div className="empty-workspace-panel">
-              <Trophy size={32} />
+              <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
               <h2>Loading contests…</h2>
             </div>
           </section>
@@ -598,7 +597,7 @@ export default function Dashboard() {
         ) : isMobile ? null : (
           <section className="workspace empty-workspace" aria-label="Contest workspace">
             <div className="empty-workspace-panel">
-              <Trophy size={32} />
+              <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
               <h2>No {statusTabs.find((tab) => tab.id === activeStatus)?.label.toLowerCase()} contests</h2>
               <p>When a contest moves into this stage, it will show up here.</p>
             </div>

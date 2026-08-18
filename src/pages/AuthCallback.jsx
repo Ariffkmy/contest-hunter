@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trophy } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider.jsx";
 
 /**
@@ -20,7 +19,7 @@ export default function AuthCallback() {
   return (
     <main className="auth-shell">
       <section className="auth-card auth-card-centered">
-        <Trophy size={28} />
+        <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
         <h2>Signing you in…</h2>
       </section>
     </main>

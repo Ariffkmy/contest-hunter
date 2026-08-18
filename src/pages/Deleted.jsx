@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { RotateCcw, Trash2, Trophy } from "lucide-react";
+import { RotateCcw, Trash2 } from "lucide-react";
 import AppNav from "../components/AppNav.jsx";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { fetchDashboard } from "../services/contestsRepo.js";
@@ -54,7 +54,7 @@ export default function Deleted() {
         <AppNav />
         <main className="settings-shell">
           <div className="empty-workspace-panel">
-            <Trophy size={32} />
+            <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
             <h2>Loading…</h2>
           </div>
         </main>

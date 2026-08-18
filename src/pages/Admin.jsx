@@ -8,7 +8,6 @@ import {
   RefreshCw,
   ShieldAlert,
   Sparkles,
-  Trophy,
   UserCog
 } from "lucide-react";
 import AppNav from "../components/AppNav.jsx";
@@ -182,7 +181,7 @@ export default function Admin() {
         <AppNav />
         <main className="settings-shell">
           <div className="empty-workspace-panel">
-            <Trophy size={32} />
+            <img src="/logo.png" alt="Contest Hunter" className="logo-img-lg" />
             <h2>Loading accounts…</h2>
           </div>
         </main>
