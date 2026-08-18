@@ -613,6 +613,16 @@ export default function Dashboard() {
                     Completed
                   </span>
                 )}
+                {selected.tracked && (
+                  <button
+                    className="secondary-button"
+                    onClick={() => stopTracking(selected.id)}
+                    style={{ marginLeft: 8 }}
+                  >
+                    <Trash2 size={14} />
+                    Remove
+                  </button>
+                )}
               </div>
             </section>
           </section>
