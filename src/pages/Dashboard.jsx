@@ -671,6 +671,7 @@ export default function Dashboard() {
               }
 
 function TypeFilter({ options, selected, onChange, open, setOpen }) {
+  const formatType = (type) => type.replaceAll("&", " & ");
 
   const label =
     selected.length === 0
