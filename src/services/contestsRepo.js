@@ -10,7 +10,8 @@ import { toUiContest } from "./contestMapper.js";
 
 const CONTEST_COLUMNS =
   "id, post_url, brand, username, profile_url, caption, prize, prompt, conditions, " +
-  "contest_type, note, deadline, posted_at, likes, comments, raw_status, source, scraped_at, image_url";
+  "contest_type, note, deadline, posted_at, likes, comments, raw_status, source, scraped_at, image_url, " +
+  "is_expired";
 
 /** The trigger in 001 raises this prefix when a free account is at its cap. */
 export const FREE_LIMIT_MARKER = "FREE_PLAN_LIMIT";
@@ -21,7 +22,14 @@ export function isFreeLimitError(message) {
 
 export async function fetchDashboard(userId) {
   const [catalog, tracking] = await Promise.all([
-    supabase.from("contests").select(CONTEST_COLUMNS).order("scraped_at", { ascending: false }),
+    // Expired contests are filtered here rather than in the RLS policy, so the
+    // rows stay reachable for admin surfaces that want the whole catalogue.
+    // The flag is set daily by the expire-contests edge function.
+    supabase
+      .from("contests")
+      .select(CONTEST_COLUMNS)
+      .eq("is_expired", false)
+      .order("scraped_at", { ascending: false }),
     supabase.from("user_contests").select("contest_id, status, saved").eq("user_id", userId)
   ]);
 
