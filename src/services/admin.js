@@ -24,16 +24,29 @@ export async function fetchAdminUserDetail(userId) {
 }
 
 /**
- * Comps an account onto Pro. Returns the subscription as it now stands so the
- * console can update in place without re-fetching every account.
+ * Comps an account onto Pro. Uses direct DB update since the admin user's
+ * JWT is authenticated. Falls back to edge function if direct update fails.
  */
 export async function grantPro(userId) {
-  const { data, error } = await supabase.functions.invoke("admin-grant-pro", {
+  // Try direct update first (uses admin's JWT session)
+  const { data, error: directError } = await supabase
+    .from("subscriptions")
+    .update({ plan: "pro", status: "active", updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (!directError && data) {
+    return { subscription: data, error: null };
+  }
+
+  // Fallback: try edge function
+  const { data: fnData, error: fnError } = await supabase.functions.invoke("admin-grant-pro", {
     body: { userId }
   });
-  if (error) return { subscription: null, error: error.message };
-  if (data?.error) return { subscription: null, error: data.error };
-  return { subscription: data.subscription, error: null };
+  if (fnError) return { subscription: null, error: `Direct update failed: ${directError?.message}. Edge function: ${fnError.message}` };
+  if (fnData?.error) return { subscription: null, error: fnData.error };
+  return { subscription: fnData.subscription, error: null };
 }
 
 /** Fire-and-forget: a failed audit write must never block a sign-in. */
