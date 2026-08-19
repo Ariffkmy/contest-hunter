@@ -23,6 +23,19 @@ export async function fetchAdminUserDetail(userId) {
   return { detail: data, error: null };
 }
 
+/**
+ * Comps an account onto Pro. Returns the subscription as it now stands so the
+ * console can update in place without re-fetching every account.
+ */
+export async function grantPro(userId) {
+  const { data, error } = await supabase.functions.invoke("admin-grant-pro", {
+    body: { userId }
+  });
+  if (error) return { subscription: null, error: error.message };
+  if (data?.error) return { subscription: null, error: data.error };
+  return { subscription: data.subscription, error: null };
+}
+
 /** Fire-and-forget: a failed audit write must never block a sign-in. */
 export async function recordLogin() {
   try {

@@ -1657,6 +1657,42 @@ textarea:focus {
   margin-bottom: 6px;
 }
 
+/* Plan row in the expanded admin card: value, the comp button, and the result
+   of the last attempt on one line. */
+.admin-plan-cell {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-grant-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  font-size: 11.5px;
+}
+
+.admin-grant-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.admin-grant-ok,
+.admin-grant-error {
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.admin-grant-ok {
+  color: #2f6b4f;
+}
+
+.admin-grant-error {
+  color: #a5432f;
+}
+
 @media (max-width: 900px) {
   .home-shell {
     padding: 18px;

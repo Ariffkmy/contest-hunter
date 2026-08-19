@@ -11,7 +11,12 @@ import {
   UserCog
 } from "lucide-react";
 import AppNav from "../components/AppNav.jsx";
-import { describeDevice, fetchAdminUserDetail, fetchAdminUsers } from "../services/admin.js";
+import {
+  describeDevice,
+  fetchAdminUserDetail,
+  fetchAdminUsers,
+  grantPro
+} from "../services/admin.js";
 import { formatTimestamp, relativeFromNow } from "../services/deadlines.js";
 
 const statusLabels = {
@@ -135,6 +140,44 @@ export default function Admin() {
   // Detail is fetched per account on first expand and then kept, so collapsing
   // and reopening a card doesn't re-hit the function.
   const [details, setDetails] = useState({});
+
+  // Which account has a grant in flight, and the per-account result of the last
+  // attempt. Keyed by id so one failure doesn't clear another card's message.
+  const [granting, setGranting] = useState(null);
+  const [grantNotice, setGrantNotice] = useState({});
+
+  const grant = async (userId) => {
+    setGranting(userId);
+    setGrantNotice((current) => ({ ...current, [userId]: null }));
+
+    const { subscription, error: grantError } = await grantPro(userId);
+
+    if (grantError) {
+      setGrantNotice((current) => ({ ...current, [userId]: { ok: false, message: grantError } }));
+    } else {
+      // Patch in place rather than reloading: the list is one function call per
+      // refresh and the response already tells us the new state of the row.
+      setUsers((current) =>
+        current.map((row) =>
+          row.id === userId
+            ? {
+                ...row,
+                plan: subscription?.plan ?? "pro",
+                planStatus: subscription?.planStatus ?? "active",
+                currentPeriodEnd: subscription?.currentPeriodEnd ?? row.currentPeriodEnd,
+                cancelAtPeriodEnd: Boolean(subscription?.cancelAtPeriodEnd)
+              }
+            : row
+        )
+      );
+      setGrantNotice((current) => ({
+        ...current,
+        [userId]: { ok: true, message: "Pro granted." }
+      }));
+    }
+
+    setGranting(null);
+  };
 
   const toggle = async (userId) => {
     if (expanded === userId) {
@@ -287,10 +330,32 @@ export default function Admin() {
                       </li>
                       <li>
                         <span>Plan</span>
-                        <strong>
-                          {user.plan}
-                          {user.planStatus ? ` · ${user.planStatus}` : ""}
-                          {user.cancelAtPeriodEnd ? " · cancelling" : ""}
+                        <strong className="admin-plan-cell">
+                          <span>
+                            {user.plan}
+                            {user.planStatus ? ` · ${user.planStatus}` : ""}
+                            {user.cancelAtPeriodEnd ? " · cancelling" : ""}
+                          </span>
+                          {user.plan !== "pro" && (
+                            <button
+                              type="button"
+                              className="secondary-button admin-grant-button"
+                              onClick={() => grant(user.id)}
+                              disabled={granting === user.id}
+                            >
+                              <Sparkles size={12} />
+                              {granting === user.id ? "Granting…" : "Grant Pro"}
+                            </button>
+                          )}
+                          {grantNotice[user.id] && (
+                            <em
+                              className={
+                                grantNotice[user.id].ok ? "admin-grant-ok" : "admin-grant-error"
+                              }
+                            >
+                              {grantNotice[user.id].message}
+                            </em>
+                          )}
                         </strong>
                       </li>
                       {user.currentPeriodEnd && (
