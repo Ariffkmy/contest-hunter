@@ -24,11 +24,46 @@ export async function fetchAdminUserDetail(userId) {
 }
 
 /**
- * Comps an account onto Pro. Uses direct DB update since the admin user's
- * JWT is authenticated. Falls back to edge function if direct update fails.
+ * Comps an account onto Pro.
+ *
+ * Primary path is the Vercel route (api/admin-grant-pro.js), which holds the
+ * service role key — the Supabase edge function lives on an account we can't
+ * deploy to, and a direct write is refused by owner-only RLS. Both older paths
+ * stay in place as fallbacks in case the route isn't deployed yet.
  */
 export async function grantPro(userId) {
-  // Try direct update first (uses admin's JWT session)
+  const failures = [];
+
+  // 1. Vercel serverless function, authorised with the admin's own JWT.
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) return { subscription: null, error: "Your session has expired. Sign in again." };
+
+    const response = await fetch("/api/admin-grant-pro", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ userId })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok && payload.subscription) {
+      return { subscription: payload.subscription, error: null };
+    }
+    // 401/403 are verdicts, not outages — retrying elsewhere would only produce
+    // a more confusing message.
+    if (response.status === 401 || response.status === 403) {
+      return { subscription: null, error: payload.error ?? "Not authorised" };
+    }
+    failures.push(`API route: ${payload.error ?? response.status}`);
+  } catch (error) {
+    failures.push(`API route: ${error.message}`);
+  }
+
+  // 2. Direct update (works only if RLS ever grants admins write access).
   const { data, error: directError } = await supabase
     .from("subscriptions")
     .update({ plan: "pro", status: "active", updated_at: new Date().toISOString() })
@@ -37,16 +72,26 @@ export async function grantPro(userId) {
     .single();
 
   if (!directError && data) {
-    return { subscription: data, error: null };
+    return {
+      subscription: {
+        plan: data.plan,
+        planStatus: data.status,
+        currentPeriodEnd: data.current_period_end,
+        cancelAtPeriodEnd: Boolean(data.cancel_at_period_end)
+      },
+      error: null
+    };
   }
+  failures.push(`Direct update: ${directError?.message ?? "no row updated"}`);
 
-  // Fallback: try edge function
+  // 3. Supabase edge function.
   const { data: fnData, error: fnError } = await supabase.functions.invoke("admin-grant-pro", {
     body: { userId }
   });
-  if (fnError) return { subscription: null, error: `Direct update failed: ${directError?.message}. Edge function: ${fnError.message}` };
-  if (fnData?.error) return { subscription: null, error: fnData.error };
-  return { subscription: fnData.subscription, error: null };
+  if (!fnError && fnData?.subscription) return { subscription: fnData.subscription, error: null };
+  failures.push(`Edge function: ${fnData?.error ?? fnError?.message ?? "no response"}`);
+
+  return { subscription: null, error: failures.join(" · ") };
 }
 
 /** Fire-and-forget: a failed audit write must never block a sign-in. */
