@@ -20,6 +20,10 @@ const CDP_URL = process.env.CH_CDP_URL ?? "http://127.0.0.1:18800";
 const HASHTAGS = process.env.CH_HASHTAGS?.split(",") ?? ["giveawaymalaysia", "contestmalaysia"];
 const MAX_POSTS = Number(process.env.CH_MAX_POSTS ?? 50);
 const NAV_WAIT_MS = Number(process.env.CH_NAV_WAIT_MS ?? 5000);
+// Inject a fixed list of post URLs (comma-separated) to bypass the hashtag page
+// entirely — useful when Instagram serves the new keyword-search page that only
+// renders a handful of posts.
+const POST_URLS = (process.env.CH_POST_URLS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
 const MONTHS = {
   jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
@@ -314,22 +318,24 @@ async function collectPostUrls({ evaluate, navigate }) {
     process.stderr.write(`scanning #${tag} ...\n`);
     await navigate(`https://www.instagram.com/explore/tags/${encodeURIComponent(tag)}/`);
     await new Promise((r) => setTimeout(r, 2500));
-    const found = await evaluate(`(() => {
-      const links = [...document.querySelectorAll('a[href*="/p/"]')].map(a => a.href);
-      return [...new Set(links)];
-    })()`).catch(() => []);
-    // retry once after scrolling
-    if (found.length < 5) {
-      await evaluate(`window.scrollTo(0, document.body.scrollHeight)`).catch(() => {});
-      await new Promise((r) => setTimeout(r, 2500));
-      const more = await evaluate(`(() => {
+    // Instagram renders the hashtag grid lazily — keep scrolling until we stop
+    // finding new post links (max SCROLL_PASSES per tag).
+    const SCROLL_PASSES = 6;
+    let lastCount = -1;
+    for (let pass = 0; pass < SCROLL_PASSES && urls.size < MAX_POSTS; pass++) {
+      const found = await evaluate(`(() => {
         const links = [...document.querySelectorAll('a[href*="/p/"]')].map(a => a.href);
         return [...new Set(links)];
       })()`).catch(() => []);
-      more.forEach((u) => urls.add(u));
+      const before = urls.size;
+      found.forEach((u) => urls.add(u));
+      process.stderr.write(`  -> pass ${pass + 1}: ${found.length} links (total ${urls.size})\n`);
+      if (urls.size === before && found.length === lastCount) break; // grid stalled
+      lastCount = found.length;
+      if (urls.size >= MAX_POSTS) break;
+      await evaluate(`window.scrollTo(0, document.body.scrollHeight)`).catch(() => {});
+      await new Promise((r) => setTimeout(r, 2200));
     }
-    found.forEach((u) => urls.add(u));
-    process.stderr.write(`  -> ${found.length} post links\n`);
   }
   return [...urls].slice(0, MAX_POSTS);
 }
@@ -492,7 +498,7 @@ if (process.argv.includes("--backfill-images")) {
 
 process.stderr.write(`connecting to browser CDP ...\n`);
 const cdp = await connect();
-const postUrls = await collectPostUrls(cdp);
+let postUrls = POST_URLS.length ? POST_URLS.slice(0, MAX_POSTS) : await collectPostUrls(cdp);
 process.stderr.write(`scraping ${postUrls.length} posts ...\n`);
 
 const contests = [];
