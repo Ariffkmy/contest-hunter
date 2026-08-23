@@ -88,7 +88,7 @@ export default function Pricing() {
               <Sparkles size={14} /> Pro
             </p>
             <h2>
-              RM19<span>/month</span>
+              RM89<span>/month</span>
             </h2>
             <ul>
               {proFeatures.map((feature) => (
