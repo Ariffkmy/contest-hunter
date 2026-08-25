@@ -150,11 +150,23 @@ export default function Dashboard() {
   );
 
   const shownContests = useMemo(
-    () =>
-      effectiveTypes.length === 0
+    () => {
+      let filtered = effectiveTypes.length === 0
         ? filteredContests
-        : filteredContests.filter((c) => effectiveTypes.includes(c.contestType || "other")),
-    [filteredContests, effectiveTypes]
+        : filteredContests.filter((c) => effectiveTypes.includes(c.contestType || "other"));
+
+      // Free users: only 10 random viewable on new_today and all tabs
+      if (!isPro && (activeTab === "new_today" || activeTab === "all")) {
+        if (filtered.length > 10) {
+          // Shuffle to get random selection
+          const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+          const visible = new Set(shuffled.slice(0, 10).map(c => c.id));
+          return filtered.map(c => ({ ...c, _blurred: !visible.has(c.id) }));
+        }
+      }
+      return filtered.map(c => ({ ...c, _blurred: false }));
+    },
+    [filteredContests, effectiveTypes, isPro, activeTab]
   );
 
   const statusCounts = useMemo(
@@ -405,9 +417,10 @@ export default function Dashboard() {
                   key={contest.id}
                   contest={contest}
                   active={contest.id === selected?.id}
-                  onSelect={() => setSelectedId(contest.id)}
-                  onSave={() => toggleSaved(contest.id)}
-                  onDelete={() => hideContest(contest)}
+                  onSelect={() => { if (!contest._blurred) setSelectedId(contest.id); }}
+                  onSave={() => { if (!contest._blurred) toggleSaved(contest.id); }}
+                  onDelete={() => { if (!contest._blurred) hideContest(contest); }}
+                  onBlurred={contest._blurred}
                 />
               ))
             ) : (
@@ -746,10 +759,19 @@ function TypeFilter({ options, selected, onChange, open, setOpen }) {
   );
 }
 
-function ContestCard({ contest, active, onSelect, onSave, onDelete }) {
+function ContestCard({ contest, active, onSelect, onSave, onDelete, onBlurred }) {
   const deadline = describeDeadline(contest.deadline);
   return (
-    <article className={active ? "contest-card active" : "contest-card"} onClick={onSelect}>
+    <article
+      className={`contest-card${active ? " active" : ""}${onBlurred ? " blurred" : ""}`}
+      onClick={onSelect}
+    >
+      {onBlurred && (
+        <div className="blurred-overlay">
+          <Lock size={24} />
+          <span>Upgrade to Pro to see all contests</span>
+        </div>
+      )}
       <div className="thumb">
               {contest.imageUrl ? (
                 <img src={contest.imageUrl} alt={contest.brand} className="thumb-image" />

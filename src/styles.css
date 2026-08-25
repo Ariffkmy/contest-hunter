@@ -2140,3 +2140,38 @@ textarea:focus {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+
+/* Free plan: locked contest cards */
+.contest-card.blurred {
+  position: relative;
+  overflow: hidden;
+}
+.contest-card.blurred .thumb,
+.contest-card.blurred .card-content {
+  filter: blur(6px);
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}
+.contest-card.blurred .blurred-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #6b7280;
+  pointer-events: auto;
+  cursor: default;
+  background: rgba(255,255,255,0.1);
+}
+.contest-card.blurred .blurred-overlay span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 16px;
+  color: #9ca3af;
+}
